@@ -1,0 +1,563 @@
+/* ==========================================================================
+   SENTINEL DOCS — MkDocs Material overrides  (v2026.06)
+   Matches the Sentinel Commander web UI dark theme.
+   ========================================================================== */
+
+/* --- 1. Brand palette ------------------------------------------------------ */
+:root {
+    --sentinel-cyan:        #00e5ff;   /* primary accent — same as presentations */
+    --sentinel-green:       #69ff47;   /* success / h2 accent */
+    --sentinel-amber:       #ffb300;   /* warning / h3 accent */
+    --sentinel-red:         #ff4444;   /* danger / critical */
+    --sentinel-blue:        #0078d4;   /* links (light mode) */
+    --sentinel-dark-bg:     #0d0d0d;   /* page background (dark) */
+    --sentinel-dark-card:   #1a1a2e;   /* code block bg (dark) */
+    --sentinel-mono: 'Fira Code', 'Consolas', 'Liberation Mono', monospace;
+}
+
+/* --- 2. Palette overrides — light mode ------------------------------------- */
+[data-md-color-scheme="default"] {
+    --md-primary-fg-color:              #0f0f0f;
+    --md-primary-fg-color--light:       #1a1a1a;
+    --md-primary-fg-color--dark:        #000000;
+    --md-primary-bg-color:              #ffffff;
+    --md-accent-fg-color:               var(--sentinel-blue);
+    --md-accent-fg-color--transparent:  rgba(0, 120, 212, 0.12);
+}
+
+/* --- 3. Palette overrides — dark (slate) mode ------------------------------ */
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color:              #0f0f0f;
+    --md-primary-fg-color--light:       #1a1a1a;
+    --md-primary-fg-color--dark:        #000000;
+    --md-primary-bg-color:              #e0e0e0;
+
+    --md-default-bg-color:              var(--sentinel-dark-bg);
+    --md-default-fg-color:              #e0e0e0;
+    --md-default-fg-color--light:       #cdcdcd;
+    --md-default-fg-color--lighter:     rgba(224, 224, 224, 0.18);
+    --md-default-fg-color--lightest:    rgba(224, 224, 224, 0.08);
+
+    --md-code-bg-color:                 var(--sentinel-dark-card);
+    --md-code-fg-color:                 #e0e0e0;
+
+    --md-accent-fg-color:               var(--sentinel-cyan);
+    --md-accent-fg-color--transparent:  rgba(0, 229, 255, 0.12);
+
+    /* sidebar */
+    --md-sidebar-width:                 15rem;
+}
+
+/* --- 4. Typography --------------------------------------------------------- */
+body, .md-typeset {
+    font-feature-settings: "kern", "liga", "calt";
+    letter-spacing: 0.005em;
+}
+
+.md-typeset h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    border-bottom: 2px solid var(--sentinel-cyan);
+    padding-bottom: 0.35em;
+    color: var(--sentinel-cyan);
+}
+
+[data-md-color-scheme="default"] .md-typeset h1 {
+    color: #0f0f0f;
+    border-color: var(--sentinel-blue);
+}
+
+.md-typeset h2 {
+    font-weight: 600;
+    color: var(--sentinel-green);
+}
+
+[data-md-color-scheme="default"] .md-typeset h2 {
+    color: #107c10;
+}
+
+.md-typeset h3 {
+    font-weight: 600;
+    color: var(--sentinel-amber);
+}
+
+[data-md-color-scheme="default"] .md-typeset h3 {
+    color: #b07800;
+}
+
+.md-typeset code,
+.md-typeset pre,
+.md-typeset kbd,
+.highlight pre {
+    font-family: var(--sentinel-mono);
+    font-size: 0.855em;
+}
+
+/* --- 5. Header & nav tabs -------------------------------------------------- */
+.md-header,
+.md-tabs {
+    background: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.md-tabs__link {
+    opacity: 0.8;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.md-tabs__link:hover,
+.md-tabs__link--active {
+    opacity: 1;
+    color: var(--sentinel-cyan) !important;
+}
+
+.md-tabs__item--active > .md-tabs__link {
+    box-shadow: inset 0 -3px 0 var(--sentinel-cyan);
+}
+
+/* Header title */
+.md-header__title {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+/* --- 6. Links -------------------------------------------------------------- */
+.md-typeset a {
+    color: var(--sentinel-cyan);
+    text-decoration: none;
+    transition: color 0.15s, border-color 0.15s;
+    border-bottom: 1px solid transparent;
+}
+
+.md-typeset a:hover {
+    color: var(--sentinel-green);
+    border-bottom-color: var(--sentinel-green);
+}
+
+[data-md-color-scheme="default"] .md-typeset a {
+    color: var(--sentinel-blue);
+}
+
+[data-md-color-scheme="default"] .md-typeset a:hover {
+    color: #005a9e;
+    border-bottom-color: #005a9e;
+}
+
+/* --- 7. Code blocks -------------------------------------------------------- */
+.md-typeset .highlight {
+    border-left: 3px solid var(--sentinel-cyan);
+    border-radius: 0 4px 4px 0;
+}
+
+[data-md-color-scheme="default"] .md-typeset .highlight {
+    border-left-color: var(--sentinel-blue);
+    background: #f5f7fa;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .highlight {
+    background: var(--sentinel-dark-card);
+}
+
+/* inline code */
+.md-typeset code:not(.highlight code) {
+    background: rgba(0, 229, 255, 0.1);
+    color: var(--sentinel-cyan);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+}
+
+[data-md-color-scheme="default"] .md-typeset code:not(.highlight code) {
+    background: rgba(0, 120, 212, 0.08);
+    color: var(--sentinel-blue);
+}
+
+/* copy button */
+.md-clipboard {
+    color: rgba(0, 229, 255, 0.5);
+}
+.md-clipboard:hover {
+    color: var(--sentinel-cyan);
+}
+
+/* --- 8. Tables ------------------------------------------------------------- */
+.md-typeset table:not([class]) {
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.82em;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) {
+    border-color: rgba(0, 120, 212, 0.2);
+}
+
+.md-typeset table:not([class]) th {
+    background: rgba(0, 229, 255, 0.08);
+    color: var(--sentinel-cyan);
+    font-weight: 700;
+    border-bottom: 2px solid var(--sentinel-cyan);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-size: 0.78em;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) th {
+    background: rgba(0, 120, 212, 0.07);
+    color: #0078d4;
+    border-bottom-color: #0078d4;
+}
+
+.md-typeset table:not([class]) tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) tr:nth-child(even) td {
+    background: rgba(0, 0, 0, 0.025);
+}
+
+.md-typeset table:not([class]) tr:hover td {
+    background: rgba(0, 229, 255, 0.06);
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) tr:hover td {
+    background: rgba(0, 120, 212, 0.05);
+}
+
+/* --- 9. Admonitions -------------------------------------------------------- */
+.md-typeset .admonition,
+.md-typeset details {
+    border-radius: 6px;
+    border-width: 1px;
+}
+
+/* note / info → cyan */
+.md-typeset .admonition.note,
+.md-typeset .admonition.info,
+.md-typeset details.note,
+.md-typeset details.info {
+    border-color: var(--sentinel-cyan);
+}
+.md-typeset .admonition.note > .admonition-title,
+.md-typeset .admonition.info > .admonition-title {
+    background: rgba(0, 229, 255, 0.1);
+}
+
+/* tip / success → green */
+.md-typeset .admonition.tip,
+.md-typeset .admonition.success,
+.md-typeset details.tip,
+.md-typeset details.success {
+    border-color: var(--sentinel-green);
+}
+.md-typeset .admonition.tip > .admonition-title,
+.md-typeset .admonition.success > .admonition-title {
+    background: rgba(105, 255, 71, 0.08);
+}
+
+/* warning → amber */
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+    border-color: var(--sentinel-amber);
+}
+.md-typeset .admonition.warning > .admonition-title {
+    background: rgba(255, 179, 0, 0.1);
+}
+
+/* danger / failure → red */
+.md-typeset .admonition.danger,
+.md-typeset .admonition.failure,
+.md-typeset details.danger,
+.md-typeset details.failure {
+    border-color: var(--sentinel-red);
+}
+.md-typeset .admonition.danger > .admonition-title,
+.md-typeset .admonition.failure > .admonition-title {
+    background: rgba(255, 68, 68, 0.1);
+}
+
+/* --- 10. Navigation sidebar ------------------------------------------------ */
+[data-md-color-scheme="slate"] .md-nav {
+    background: transparent;
+}
+
+.md-nav__link--active {
+    color: var(--sentinel-cyan) !important;
+    font-weight: 600;
+}
+
+.md-nav__link:hover {
+    color: var(--sentinel-cyan);
+}
+
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+    color: var(--sentinel-cyan);
+}
+
+/* sidebar section titles */
+.md-nav__title {
+    font-size: 0.72em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(0, 229, 255, 0.55);
+}
+
+/* --- 11. Search ------------------------------------------------------------ */
+.md-search__input {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.md-search__input:focus {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+[data-md-color-scheme="default"] .md-search__input {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* search highlight */
+.md-search-result mark {
+    background: rgba(0, 229, 255, 0.25);
+    color: inherit;
+    border-radius: 2px;
+}
+
+/* --- 12. Footer ------------------------------------------------------------ */
+.md-footer {
+    background: #050505;
+}
+
+.md-footer-meta {
+    background: #030303;
+    color: #666;
+    font-size: 0.75em;
+}
+
+.md-footer-meta a {
+    color: #888;
+}
+
+/* --- 13. TOC (right sidebar) ----------------------------------------------- */
+.md-nav--secondary .md-nav__link {
+    font-size: 0.78em;
+}
+
+.md-nav--secondary .md-nav__link--active {
+    color: var(--sentinel-cyan) !important;
+    border-left: 2px solid var(--sentinel-cyan);
+    padding-left: 0.4em;
+}
+
+/* --- 14. Version badge ----------------------------------------------------- */
+.sentinel-version {
+    display: inline-block;
+    background: rgba(0, 229, 255, 0.12);
+    color: var(--sentinel-cyan);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 4px;
+    padding: 0.1em 0.5em;
+    font-size: 0.75em;
+    font-family: var(--sentinel-mono);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}
+
+/* --- 15. Status pill badges ------------------------------------------------ */
+.badge-ok      { color: var(--sentinel-green); font-weight: 700; }
+.badge-warn    { color: var(--sentinel-amber); font-weight: 700; }
+.badge-crit    { color: var(--sentinel-red);   font-weight: 700; }
+.badge-info    { color: var(--sentinel-cyan);  font-weight: 700; }
+
+/* --- 16. Keyboard keys (++key++) ------------------------------------------- */
+.md-typeset kbd {
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-bottom-width: 2px;
+    color: var(--sentinel-cyan);
+    border-radius: 4px;
+    font-size: 0.78em;
+}
+
+[data-md-color-scheme="default"] .md-typeset kbd {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: #ccc;
+    border-bottom-color: #999;
+    color: inherit;
+}
+
+/* --- 17. Page revision date ------------------------------------------------ */
+.md-source-date {
+    opacity: 0.55;
+    font-size: 0.72em;
+}
+
+/* --- 18. Scrollbar (dark mode) --------------------------------------------- */
+[data-md-color-scheme="slate"] * {
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* --- 19. Fix: nav tabs overflow on narrow screens -------------------------- */
+.md-tabs__list {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.md-tabs__list::-webkit-scrollbar {
+    display: none;
+}
+
+.md-tabs__item {
+    flex-shrink: 0;
+}
+
+/* --- 20. Sci-fi: header glow & scan line effect ---------------------------- */
+.md-header {
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    position: relative;
+}
+
+.md-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--sentinel-cyan) 30%,
+        var(--sentinel-green) 60%,
+        transparent 100%
+    );
+    opacity: 0.6;
+}
+
+/* --- 21. Sci-fi: code block header (filename label) ------------------------ */
+.md-typeset .highlight .filename {
+    background: rgba(0, 229, 255, 0.08);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    color: var(--sentinel-cyan);
+    font-family: var(--sentinel-mono);
+    font-size: 0.75em;
+    letter-spacing: 0.05em;
+}
+
+/* --- 22. Sci-fi: h1 with terminal cursor effect ---------------------------- */
+[data-md-color-scheme="slate"] .md-typeset h1 {
+    text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h2 {
+    text-shadow: 0 0 15px rgba(105, 255, 71, 0.2);
+}
+
+/* --- 23. Sci-fi: sidebar dark panel ---------------------------------------- */
+[data-md-color-scheme="slate"] .md-sidebar {
+    background: #080808;
+    border-right: 1px solid rgba(0, 229, 255, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-sidebar--secondary {
+    border-right: none;
+    border-left: 1px solid rgba(0, 229, 255, 0.08);
+}
+
+/* --- 24. Sci-fi: content area subtle background pattern -------------------- */
+[data-md-color-scheme="slate"] .md-content {
+    background: #0d0d0d;
+}
+
+[data-md-color-scheme="slate"] .md-content__inner {
+    padding-top: 1.5rem;
+}
+
+/* --- 25. Fix: inline code wrapping in tables ------------------------------- */
+.md-typeset table td code {
+    white-space: nowrap;
+}
+
+/* --- 26. Sci-fi: blockquote ------------------------------------------------ */
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+    border-left: 3px solid var(--sentinel-cyan);
+    background: rgba(0, 229, 255, 0.04);
+    padding: 0.5em 1em;
+    border-radius: 0 4px 4px 0;
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote p {
+    color: #aaa;
+}
+
+/* --- 27. Language selector styling ----------------------------------------- */
+.md-select__link {
+    font-size: 0.8em;
+}
+
+[data-md-color-scheme="slate"] .md-select__inner {
+    background: #111;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+/* --- 28. Page title in browser tab ----------------------------------------- */
+.md-header__title .md-ellipsis {
+    font-family: var(--sentinel-mono);
+    font-size: 0.9em;
+    letter-spacing: 0.05em;
+}
+
+
+/* --- 29. Active language indicator (Tab-navigated / current) --------------- */
+/* Highlight currently active language in the switcher with amber */
+html[lang='en'] .md-select__link[hreflang='en'],
+html[lang='cs'] .md-select__link[hreflang='cs'] {
+    color: var(--sentinel-amber) !important;
+    font-weight: 700;
+    position: relative;
+}
+
+html[lang='en'] .md-select__link[hreflang='en']::before,
+html[lang='cs'] .md-select__link[hreflang='cs']::before {
+    content: '▶ ';
+    font-size: 0.6em;
+    vertical-align: middle;
+}
+
+/* --- 30. Focus-visible indicator for keyboard (Tab) navigation ------------- */
+:focus-visible {
+    outline: 2px solid var(--sentinel-amber) !important;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+.md-select__link:focus-visible {
+    outline: 2px solid var(--sentinel-amber) !important;
+    outline-offset: 2px;
+    background: rgba(255, 179, 0, 0.12);
+    border-radius: 2px;
+}

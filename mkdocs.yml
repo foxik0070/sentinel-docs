@@ -1,0 +1,202 @@
+site_name: Sentinel Documentation
+site_url: https://sentinel-docs.example.com/
+site_description: "Sentinel Commander v2026.06 — Hybrid AI Monitoring for HPC & Enterprise Linux"
+site_author: FoxiK
+copyright: "FoxiK 2026 · foxik0070@gmail.com"
+
+# Repository
+repo_name: lukas/sentinel-docs
+repo_url: https://git.example.com/lukas/sentinel-docs
+edit_uri: edit/main/docs/
+
+# Theme
+theme:
+  name: material
+  font:
+    text: Roboto
+    code: Fira Code
+  icon:
+    repo: fontawesome/brands/git-alt
+    logo: material/shield-check
+  favicon: https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/Shield/SVG/ic_fluent_shield_24_regular.svg
+
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    # Navigation
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    # TOC
+    - toc.follow
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+    # Content
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - content.tabs.link
+    - content.tooltips
+    # Header
+    - header.autohide
+
+# CSS overrides
+extra_css:
+  - stylesheets/sentinel.css
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Link to this section
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      auto_title: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.smartsymbols
+
+# Extra
+extra:
+  # Language switcher in header (next to search)
+  alternate:
+    - name: English
+      link: /
+      lang: en
+    - name: Čeština
+      link: /cs/
+      lang: cs
+  social:
+    - icon: fontawesome/brands/git-alt
+      link: https://git.example.com/lukas
+      name: Gitea
+  analytics:
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/thumb-up-outline
+          name: Yes
+          data: 1
+          note: Thanks for your feedback!
+        - icon: material/thumb-down-outline
+          name: No
+          data: 0
+          note: Thanks — let us know how to improve.
+
+# Plugins
+plugins:
+  - search:
+      lang:
+        - en
+        - cs
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: cs
+          name: Čeština
+          build: true
+          nav_translations:
+            🏠 Introduction: 🏠 Úvod
+            🧩 System Components: 🧩 Komponenty systému
+            Remote Agent: Vzdálený Agent
+            Console Client: Konzolový Klient
+            Overhealth Monitor: Overhealth Monitor
+            Detectors & Plugins: Detektory a Pluginy
+            Local Network Dashboard: Lokální Síť Dashboard
+            HW Robot: HW Robot (RPi)
+            ⚙️ Architecture & Core: ⚙️ Architektura a Jádro
+            User Guide: Uživatelská příručka
+            Technical Documentation: Technická dokumentace
+            Developer Guide: Programátorská dokumentace
+            🤖 AI Autofix: 🤖 AI Autofix
+            📱 Sentinel App: 📱 Sentinel App (Android)
+            📚 Reference: 📚 Reference
+            API Reference: API Reference
+            Deployment Guide: Průvodce nasazením
+            Troubleshooting: Řešení problémů
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+
+# Navigation
+nav:
+  - 🏠 Introduction: index.md
+  - 🧩 System Components:
+      - Remote Agent: sentinel-agent.md
+      - Console Client: sentinel-console-client.md
+      - Overhealth Monitor: sentinel-overhealth.md
+      - Detectors & Plugins: sentinel-plugins.md
+      - Local Network Dashboard: sentinel-alert.md
+      - HW Robot: sentinel-hw.md
+  - ⚙️ Architecture & Core:
+      - User Guide: sentinel/user_documentation.md
+      - Technical Documentation: sentinel/technical_documentation.md
+      - Developer Guide: sentinel/programming_documentation.md
+  - 🤖 AI Autofix: sentinel-autofix.md
+  - 📱 Sentinel App: sentinel-app.md
+  - 📚 Reference:
+      - API Reference: API.md
+      - Deployment Guide: DEPLOYMENT.md
+      - Troubleshooting: TROUBLESHOOTING.md

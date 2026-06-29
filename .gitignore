@@ -1,0 +1,31 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# MkDocs build output (generated static site)
+site/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs and text editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Internal dev files
+CLAUDE.md
+todo.md
+resume.sh
+chyby.md
+.claude/
