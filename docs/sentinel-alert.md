@@ -135,7 +135,7 @@ All settings live in `/etc/sentinel/sentinel-alert.conf` (INI format).
 ```ini
 [auth]
 username = admin
-password = admin
+password = CHANGE_ME
 secret   =
 
 [mode]
