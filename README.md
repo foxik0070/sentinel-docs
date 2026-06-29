@@ -1,5 +1,5 @@
 # Sentinel Docs
-
+![sentinel-docs](docs.png)
 ![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)
 ![MkDocs](https://img.shields.io/badge/MkDocs-Material-blue)
 ![Languages](https://img.shields.io/badge/languages-EN%20%2B%20CS-green)
