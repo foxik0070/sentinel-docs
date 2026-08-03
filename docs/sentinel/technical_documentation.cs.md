@@ -1,4 +1,4 @@
-# Sentinel Commander — Technická dokumentace (v2026.06.024)
+# Sentinel Commander — Technická dokumentace (v2026.08.001)
 
 Určeno pro systémové architekty, L3 support a infrastrukturní administrátory. Pokrývá interní mechanismy, stabilitu daemona, správu paměti a OS integraci.
 
@@ -43,6 +43,28 @@ ChromaDB vyžaduje SQLite ≥ 3.35.0. Na starších RHEL systémech `__main__.py
 │   ├── syslog_receiver.py  ← Syslog UDP/TCP receiver
 │   ├── safety.py           ← klasifikátor příkazů, allowed_commands
 │   ├── utils.py            ← rate-limit, IP ban, JSON logging, int_param()
+│   ├── ai_guard.py         ← obrana proti prompt-injection, limit akcí, smyčka
+│   ├── ai_verify.py        ← kontrola halucinací proti infrastruktuře
+│   ├── ai_profiles.py      ← profily kontextového okna dle úlohy
+│   ├── ai_runtime.py       ← cache, konzistence, token budget, routing
+│   ├── diagnostics.py      ← pevný katalog příkazů (AI vybírá ID, nikdy raw shell)
+│   ├── fix_verify.py       ← verifikace opravy; selhání jako anti-vzory
+│   ├── remediation.py      ← žebříček: observe→reload→restart→reboot
+│   ├── remediation_plan.py ← rollback, riziko, dry-run, fronta
+│   ├── policy.py           ← vysvětlení blokace, návrhy allowlistu
+│   ├── escalation.py       ← eskalace s kontextem předchozích pokusů
+│   ├── correlate.py        ← změnová korelace, kauzální řetězce
+│   ├── incident_analysis.py← timeline, kaskády, seřazené hypotézy
+│   ├── trend_detect.py     ← tichá degradace, chybějící signály
+│   ├── baseline.py         ← per-host normální profil, sezónnost
+│   ├── alert_quality.py    ← těžba false-alarmů
+│   ├── playbooks.py        ← postupy z manuálních oprav
+│   ├── foresight.py        ← kapacitní prognóza, týdenní výhled
+│   ├── unmatched.py        ← vzorkování nezachycených logů
+│   ├── rag_utils.py        ← hybridní vyhledávání, citace, chunking
+│   ├── knowledge.py        ← runbooky, prevention hinty, přenos KB
+│   ├── infra_audit.py      ← config drift, zombie, certifikáty, post-reboot
+│   ├── dependencies.py     ← graf závislostí, blast-radius, simulace odstavení
 │   ├── routes/             ← Flask Blueprints
 │   │   ├── main.py         ← login (2FA flow), dashboard
 │   │   ├── issues.py
@@ -61,7 +83,7 @@ ChromaDB vyžaduje SQLite ≥ 3.35.0. Na starších RHEL systémech `__main__.py
 ├── config.yaml.example
 ├── Makefile                ← make lint / test / build / ci
 ├── .gitea/workflows/ci.yml ← CI pipeline (pytest + node --check + build)
-└── tests/                  ← 181 testů (route, security, integrační, benchmark)
+└── tests/                  ← 1050 testů (route, security, integrační, AI vrstva, benchmark)
 
 /etc/sentinel/
 └── config.yaml             ← hot-reloadovatelná konfigurace (validace jsonschema)
@@ -202,7 +224,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 
 ## CI a testovací sada
 
-- **181 testů**: Flask route testy, security testy (brute force, API scopes, hostname injection, maskování secrets), integrační testy (celý lifecycle issue na reálné DB), výkonnostní benchmark dashboardu
+- **1050 testů**: Flask route testy, security testy (brute force, API scopes, hostname injection, maskování secrets), integrační testy (celý lifecycle issue na reálné DB), výkonnostní benchmark dashboardu
 - **CI:** Gitea Actions (`.gitea/workflows/ci.yml`) — pytest + `node --check` + `make build`; lokální `pre-push` git hook
 - **Lint:** ruff (`pyproject.toml`), ESLint s `no-redeclare=error`; `make ci` spouští lint + testy
 - **Build artefakty:** `.min.js` soubory se buildí při deployi a v gitu nejsou

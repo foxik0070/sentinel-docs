@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.06.024)
+# Sentinel Commander — Documentation (v2026.08.001)
 
 ```
                    ##
@@ -23,10 +23,10 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.06.024
+                    v2026.08.001
 ```
 
-**Hybrid AI Log Monitor & Analyzer for HPC & Enterprise Linux Infrastructure**
+**Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
 
 ---
 
@@ -35,27 +35,70 @@
 - **[Deployment Guide](./DEPLOYMENT.md)** — Production deployment of the entire system
 - **[API Reference](./API.md)** — Plugin and integration API
 - **[Troubleshooting](./TROUBLESHOOTING.md)** — Common issues and solutions
+- **[Host Setup](./host-setup.md)** — Preparing monitored hosts for AI diagnostics
 
 ---
 
 ## What is Sentinel?
 
-Sentinel Commander is an advanced hybrid monitoring system with artificial intelligence designed for HPC (High-Performance Computing) and enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). The key feature is integration with Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, and ChromaDB (RAG).
+Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-Since v2026.06.005 the project went through 17 release iterations focused on **security hardening** (2FA/TOTP, bcrypt, CSRF, API scopes), **enterprise integrations** (Discord, Telegram, Opsgenie, Zabbix, Gitea, Grafana, S3), **analytics** (health score, issue forecast, SLA reports) and **engineering quality** (CI pipeline, 181 automated tests, extracted `notifier.py`/`scheduler.py` modules).
+As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+
+---
+
+## What's New in v2026.08.001 (2026-08-03)
+
+| Feature | Detail |
+|---|---|
+| **Tests: 938 → 1050** | 112 new tests covering knowledge base, infra audit, and dependency mapping modules |
+| **80/100 AI roadmap items** | Up from 66/100 in v2026.07 |
+| **3 critical SSH bugs fixed** | SSH broken July 30–Aug 1 in diagnostics + remediation; fully resolved |
+| **`knowledge.py`** | Runbooks, prevention hints, training pairs, KB transfer to/from other instances |
+| **`infra_audit.py`** | Config drift detection, zombie process auditing, cert expiry, post-reboot checklist, docs accuracy check |
+| **`dependencies.py`** | Inferred host dependency graph, blast-radius calc, simulated shutdown impact |
+| **`host-setup.md`** | New guide: preparing monitored hosts for AI diagnostics (sentinel user, sudoers, journal group) |
+
+---
+
+## What's New in v2026.07.001 (2026-07-31)
+
+### AI Layer — 21 New Modules
+
+| Module | What it does |
+|---|---|
+| `ai_guard.py` | Prompt-injection defence for log content, hourly action cap, loop detection |
+| `ai_verify.py` | Hallucination check — validates AI claims against known infrastructure |
+| `ai_profiles.py` | Context-window profiles per task type (triage, deep analysis, chat) |
+| `ai_runtime.py` | Response cache, consistency guard, token budget, model routing |
+| `diagnostics.py` | Fixed read-only command catalog — AI picks command IDs, never writes raw shell; executes and interprets real output |
+| `fix_verify.py` | Post-fix verification ~15 min after each remediation attempt; failures fed back as anti-patterns |
+| `remediation.py` | Graduated ladder: observe → reload → restart → reboot |
+| `remediation_plan.py` | Rollback, contextual risk assessment, dry-run mode, work queue |
+| `policy.py` | Block explanation, allowlist/auto-execute proposals |
+| `escalation.py` | Escalation with context (what was already tried + why it failed) |
+| `correlate.py` | Change correlation, causal chains, cross-host patterns |
+| `incident_analysis.py` | Common denominator finder, incident timeline, cascade detection, ranked hypotheses |
+| `trend_detect.py` | Silent degradation (regression + r²), missing-signal detection |
+| `baseline.py` | Per-host normal profile, seasonality detection, auth-log audit |
+| `alert_quality.py` | False-alarm mining from historical data |
+| `playbooks.py` | Procedures learned from manual fixes — builds institutional memory |
+| `foresight.py` | Capacity forecast, weekly infrastructure outlook |
+| `unmatched.py` | Random sampling of log lines that no plugin catches |
+| `rag_utils.py` | Compression, hybrid search, citations, chunk management |
+| `knowledge.py` | (preview in 07, promoted to stable in 08) |
+| `infra_audit.py` | (preview in 07, promoted to stable in 08) |
+
+### Scale
+
+- Tests: **317 → 938** (+621 new tests covering the full AI layer)
+- AI roadmap: **66/100** items complete
+- Full decision audit trail for every AI action
+- All AI modules fully integrated into the Scheduler maintenance loop
 
 ---
 
 ## What's New in v2026.06.024 (since v2026.06.005)
-
-### Latest in v2026.06.023 → v2026.06.024
-
-| Feature | Detail |
-|---|---|
-| **Public `/status` dashboard** | Auth-free status page: CPU/RAM/Disk telemetry, anonymized recent incidents, online/offline agent table, infra/agent/security category breakdown, fully responsive grid |
-| **Mobile responsivity** | Issue cards switch from inline styles to CSS classes (`issue-row-inner`/`issue-content-area`/`issue-actions`); secondary actions collapse under 480 px; modal overlay `flex-start` + `overflow-y:auto` so dialogs are always reachable; header bar no longer overflows |
-| **CSRF session fix** | CSRF token now seeded into the session at render time — fixes chat returning 403 on mobile and desktop |
-| **Category cleanup** | `UNKNOWN` category normalized to `OSTATNÍ` / Other in issue cards and groups (DB migration of existing records) |
 
 ### Security Hardening
 
@@ -81,80 +124,22 @@ Since v2026.06.005 the project went through 17 release iterations focused on **s
 | **Outbound channels** | MS Teams · Slack · PagerDuty · Discord (embeds) · Telegram bot · Opsgenie (Events API v2) · ntfy.sh · Gotify · SMTP e-mail (STARTTLS 587 / SSL 465) · Matrix · Home Assistant · MQTT · generic Webhook (HMAC-SHA256 + replay protection) |
 | **Inbound webhooks** | `/api/inbound/grafana` (legacy + unified alerting) · `/api/inbound/alertmanager` (Prometheus AM) · `/api/inbound/zabbix` (Media Type flat JSON) |
 | **Reliability** | Retry queue with exponential backoff (30 s/120 s/300 s, max 3 attempts); per-severity throttling (critical/security/root 15 min, high 1 h, medium/low 4 h) |
-| **Granularity** | Per-detector 🔔 toggle, per-channel toggle, instance name prefix in all titles (`[Instance] CHANNEL alert`) |
 | **Lifecycle webhooks** | Configurable webhooks fired on issue CREATED / ACKNOWLEDGED / RESOLVED |
-| **Gitea issue sync** | Critical issues automatically opened in a Gitea repository (`GITEA_URL/TOKEN/REPO`) |
-| **Grafana annotations** | `_send_grafana_annotation()` on critical/security alerts |
-| **Prometheus** | `GET /metrics` scrape endpoint + pushgateway export of Sentinel self-metrics |
+| **Gitea issue sync** | Critical issues automatically opened in a Gitea repository |
+| **Prometheus** | `GET /metrics` scrape endpoint + pushgateway export |
 
-### Analytics & AI
+### Analytics, Agent Fleet, Operations
 
-| Feature | Detail |
-|---|---|
-| **Health score per host** | `/api/agents/<hostname>/health_score` — composite 0–100 with A–D grade |
-| **Issue forecast** | `/api/analytics/forecast` — linear regression, 7-day outlook |
-| **SLA & fatigue reports** | Resolution-time table, alert-fatigue chart, flapping issues widget, changes-since-login |
-| **AI capacity planning** | `/api/reports/capacity_plan` — telemetry aggregated per host, AI returns HOST/PROBLEM/RECOMMENDATION/PRIORITY cards |
-| **Auto-clustering** | `/api/analyze/auto_clusters` — groups issues by plugin/host in 30 min windows, AI names the root cause |
-| **AI postmortem** | `/api/issues/<key>/postmortem` — AI-generated Markdown incident postmortem |
-| **Auto-severity & duplicates** | LLM-assigned severity, automatic duplicate detection |
-| **Weekly digest** | Includes flapping issues and average resolution time |
-
-### Agent Fleet Management
-
-| Feature | Detail |
-|---|---|
-| **Batch SSH** | `POST /api/ssh/batch` — parallel SSH via ThreadPoolExecutor (10 threads, max 50 hosts, 15 s per-host timeout), allowlist checked |
-| **Per-agent thresholds** | `check_agent_thresholds()` enforced on every ingest payload; quick-buttons CPU > 90 %, RAM > 90 %, Disk > 85 % |
-| **HW metrics over SSH** | net (`/proc/net/dev`), GPU (nvidia-smi/rocm-smi), SMART (smartctl), UPS (apcaccess/upsc) |
-| **CVE scanner** | `apt list --upgradable` / `dnf --security check-update` per agent |
-| **Package inventory** | `dpkg-query` / `rpm -qa` with live filter in agent detail |
-| **QR registration** | Token modal generates QR `{hostname, token, ingest_url}`; one-click token copy; bulk token rotation (`/api/agents/rotate_all_tokens`) |
-| **Maintenance windows** | Per-host snooze rules; agent detail shows its own windows |
-| **Version drift alert** | Issue raised when an agent registers with a build older than 30 days; offline duration tracked in telemetry |
-
-### Operations & Reliability
-
-| Feature | Detail |
-|---|---|
-| **Health endpoints** | `/healthz` (Kubernetes/UptimeKuma JSON probe, 503 on DB failure) · redesigned `/status` public page (auto-refresh 30 s) |
-| **Config management** | jsonschema validation of critical keys · backup/restore with automatic pre-restore snapshots (10 kept) · snapshot diff endpoint + UI |
-| **Hot reload** | SIGHUP reloads config **and** watcher patterns **and** plugins; `/api/admin/log_level` changes log level at runtime |
-| **Graceful shutdown** | SIGTERM flushes telemetry buffer + publishes MQTT `sentinel/status: offline` |
-| **Backups** | `/api/admin/backup/download` (tar.gz) + `/api/admin/backup/s3` (S3/MinIO upload) |
-| **File Integrity Monitoring** | SHA-256 hash of critical files checked every minute → security issue on change |
-| **Ansible runner** | `/api/ansible/run` — validated playbook path, streamed output |
-| **Synthetic checks** | HTTP health checks (`SYNTHETIC_CHECKS`), heartbeat URL monitoring, SSL certificate expiry (< 14 days → security issue) |
-| **Self-monitoring** | RAM/threads/queue/load self-metrics every minute · memory watchdog (RSS > 1.5 GB → warning) · AI queue backlog alert · DB size alert · no-agent alert · startup time profiling |
-
-### Performance
-
-- **Issues cache** with TTL 5 s + double-checked `threading.Lock`; invalidation on write
-- **Telemetry write batching** (buffer flushed periodically), dashboard sparklines query cached 5 min
-- **Composite DB indexes** (`idx_problems_plugin_ch_ts`, `idx_issue_hist_plugin_ts`, severity + telemetry indexes)
-- **WAL tuning** — `wal_autocheckpoint=200`, `synchronous=NORMAL`, explicit checkpoint after prune; VACUUM after >10 k deleted rows; 90-day issue history retention
-- **HTTP caching** — ETag + `max-age` + 304 conditional GET for static files; `defer` + `preload` script loading; gzip
-- **SocketIO backpressure** — bounded frontend queue (500, drop-oldest); WS message dedup in 1 s window
-- **Virtual scroll** — issues paginated by 50 with "Load more"
-
-### UI / UX
-
-- **Runbooks** tab in Tools with CRUD + runbook modal
-- **Modern interactive charts** — min/max/avg badges, dashed average line, rich tooltips (dashboard trend, donut with center total, alert timeline, agent sparklines)
-- **Issue fullscreen overlay**, inline comments, colored labels, drag & drop tabs, mobile swipe (right = acknowledge, left = delete)
-- **Issue copy as Markdown**, bulk CSV export (`Alt+E`), bulk acknowledge (`Alt+A`), chat export to Markdown
-- **Accessibility** — ARIA `role="dialog"`, `aria-modal`, `aria-labelledby` on all modals, Escape to close
-- **DB management panel** in Settings — size, record counts, "Prune now" and "Aggregate telemetry" buttons
-- **Chat** — suggested query chips, LIVE tag (enriches the prompt with active-issue context), Markdown rendering
-- **Timezone config** — `DISPLAY_TZ`, `/api/timezone/info`, `/api/timezone/convert`
+- Health score per host (A–D grade), 7-day issue forecast, SLA & alert-fatigue reports
+- Batch SSH (50 hosts, ThreadPoolExecutor), per-agent thresholds, CVE scanner, package inventory
+- `/healthz` probe, config backup/restore with snapshots, SIGHUP hot-reload, FIM, Ansible runner
+- Composite DB indexes, WAL tuning, HTTP caching (ETag + 304), SocketIO backpressure, virtual scroll
 
 ### Engineering Quality
 
-- **118 automated tests** — route tests, security tests (brute force, scopes, hostname injection, secrets masking), integration tests (full issue lifecycle on a real DB), dashboard benchmark
-- **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
-- **Linting** — ruff (Python), ESLint with `no-redeclare=error` (JS), pinned `requirements.txt`
-- **Refactoring** — `notifier.py` (all outbound channels), `scheduler.py` (3-tier maintenance loop) and `ssh_utils.py` extracted from `chat_service.py`
-- **CONTRIBUTING.md** — architecture diagram, dev workflow, security rules
+- **181 automated tests** (v2026.06.024 baseline) — now 1 050 in v2026.08.001
+- CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
+- Linting — ruff (Python), ESLint, pinned `requirements.txt`
 
 ---
 
@@ -164,6 +149,15 @@ Since v2026.06.005 the project went through 17 release iterations focused on **s
 |---|---|
 | **AI Inference** | Hailo-10H NPU (hailo-ollama) · CPU Ollama · external API · runtime model switch |
 | **RAG Knowledge Base** | ChromaDB + nomic-embed-text · BM25 TF×IDF fallback · custom file upload (.md/.txt/.pdf/.docx/.csv) · one-click reindex |
+| **AI Safety** | Prompt-injection defence · hourly action cap · loop detection · hallucination check · full audit trail (`ai_guard.py`, `ai_verify.py`) |
+| **AI Diagnostics** | Fixed read-only command catalog — AI picks IDs, never raw shell; executes and interprets real output (`diagnostics.py`) |
+| **AI Verification** | Post-fix check ~15 min after each remediation; failures flagged as anti-patterns (`fix_verify.py`) |
+| **AI Remediation** | Graduated ladder: observe → reload → restart → reboot · rollback · dry-run · contextual risk (`remediation.py`, `remediation_plan.py`) |
+| **AI Correlation** | Causal chains · change correlation · cross-host patterns · cascade detection · incident timelines · ranked hypotheses (`correlate.py`, `incident_analysis.py`) |
+| **AI Baselining** | Per-host normal profile · seasonality · silent degradation (regression + r²) · missing signals (`baseline.py`, `trend_detect.py`) |
+| **AI Foresight** | Capacity forecast · weekly outlook · false-alarm mining · unmatched log sampling (`foresight.py`, `alert_quality.py`, `unmatched.py`) |
+| **Knowledge Base** | Runbooks · prevention hints · training pairs · KB transfer between instances (`knowledge.py`) |
+| **Infra Audit** | Config drift · zombie processes · cert expiry · post-reboot checklist · docs accuracy check · dependency blast-radius (`infra_audit.py`, `dependencies.py`) |
 | **Hybrid Telemetry** | Pull (inotify logs) + Push (agents via Bearer token) · multiple IPs per agent · agent version tracking (SHA) |
 | **Autofix** | AI proposes fix → admin Approve/Reject → SSH exec on mgmt node · allowed-commands allowlist · autonomous exec |
 | **Predictive Analytics** | TTC (Time-To-Critical) for disks · Mann-Kendall trend test · linear regression forecast · capacity planning |
@@ -172,10 +166,8 @@ Since v2026.06.005 the project went through 17 release iterations focused on **s
 | **Prometheus** | `GET /metrics` scrape + pushgateway export; auth via scrape_token |
 | **Dashboard** | Stat cards · interactive min/max/avg charts · trend chart · donut · health trend · flapping widget · live clock |
 | **Auth** | viewer / admin / superadmin · LDAP (lldap + OpenLDAP) · **2FA/TOTP** · **bcrypt** · rate-limit + IP ban · **CSRF** |
-| **Issue UI** | Bulk select · filter · group-collapse · printable report · CSV export · history · suppression rules · tagging · severity · occurrence counter · batch AI analysis · fullscreen · labels · inline comments |
 | **Issue Workflow** | `active` → `acknowledged` → `validating` → `resolved` · escalation rules · lifecycle webhooks |
 | **Auto-Remediation** | One-shot SSH fix · allowed_commands with `auto_execute` · AUTOFAIL issues · SSH jump host (ProxyJump) · Ansible runner |
-| **REST API Keys** | Fine-grained scopes (`read:issues`, `write:actions`, `admin:users`) · SHA-256 hash in DB · UI in Settings |
 | **Plugin Hot-Reload** | `POST /api/plugins/reload` · SIGHUP full reload · Pattern Editor with regex tester + AI pattern suggestions |
 | **Telemetry** | Anomaly detection (3σ) · fixed thresholds · per-agent thresholds · InfluxDB export · heatmap · health score history |
 | **Topology** | Agent topology map · plugin dependency graph · SNMP CDP/LLDP · Canvas force-directed graph |
@@ -225,6 +217,33 @@ Since v2026.06.005 the project went through 17 release iterations focused on **s
 | `analytics.py` | TTC, Mann-Kendall, Z-Score, health score, forecast |
 | `topology.py` | Agent topology builder, SNMP CDP/LLDP |
 | `routes/` | Flask Blueprints: main, issues, agents, actions, system, export, integrations, chat |
+
+### AI layer modules (v2026.07+)
+
+| File | Responsibility |
+|---|---|
+| `ai_guard.py` | Prompt-injection defence, action cap, loop detection |
+| `ai_verify.py` | Hallucination check against known infrastructure |
+| `ai_profiles.py` | Context-window profiles per task type |
+| `ai_runtime.py` | Response cache, consistency, token budget, model routing |
+| `diagnostics.py` | Fixed read-only command catalog — AI picks IDs, not raw shell |
+| `fix_verify.py` | Post-fix verification; failures feed back as anti-patterns |
+| `remediation.py` | Graduated remediation ladder with rollback |
+| `remediation_plan.py` | Risk assessment, dry-run, work queue |
+| `policy.py` | Block explanation, allowlist/auto-execute proposals |
+| `escalation.py` | Escalation with prior-attempt context |
+| `correlate.py` | Change correlation, causal chains, cross-host patterns |
+| `incident_analysis.py` | Timeline, cascade detection, ranked hypotheses |
+| `trend_detect.py` | Silent degradation, missing signals |
+| `baseline.py` | Per-host normal profile, seasonality, auth-log audit |
+| `alert_quality.py` | False-alarm mining from historical data |
+| `playbooks.py` | Procedures learned from manual fixes |
+| `foresight.py` | Capacity forecast, weekly outlook |
+| `unmatched.py` | Sampling of uncaught log lines |
+| `rag_utils.py` | Compression, hybrid search, citations, chunking |
+| `knowledge.py` | Runbooks, prevention hints, KB transfer |
+| `infra_audit.py` | Config drift, zombies, certs, post-reboot check |
+| `dependencies.py` | Host dependency graph, blast-radius, shutdown simulation |
 
 ---
 

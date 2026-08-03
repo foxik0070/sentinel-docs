@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.06.024)
+# Sentinel Commander — Dokumentace (v2026.08.001)
 
 ```
                    ##
@@ -23,10 +23,10 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.06.024
+                    v2026.08.001
 ```
 
-**Hybridní AI log monitor a analyzátor pro HPC a enterprise Linux infrastrukturu**
+**Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
 
 ---
 
@@ -35,27 +35,70 @@
 - **[Průvodce nasazením](./DEPLOYMENT.md)** — produkční nasazení celého systému
 - **[API Reference](./API.md)** — API pro pluginy a integrace
 - **[Řešení problémů](./TROUBLESHOOTING.md)** — časté problémy a jejich řešení
+- **[Nastavení hostů](./host-setup.md)** — příprava monitorovaných hostů pro AI diagnostiku
 
 ---
 
 ## Co je Sentinel?
 
-Sentinel Commander je pokročilý hybridní monitorovací systém s umělou inteligencí určený pro HPC (High-Performance Computing) a enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčovým prvkem je integrace Hailo AI HAT 2+ NPU (hailo-ollama), lokálního/externího Ollama LLM a ChromaDB (RAG).
+Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Od verze v2026.06.005 prošel projekt 17 release iteracemi zaměřenými na **bezpečnostní hardening** (2FA/TOTP, bcrypt, CSRF, API scopes), **enterprise integrace** (Discord, Telegram, Opsgenie, Zabbix, Gitea, Grafana, S3), **analytiku** (health score, předpověď issues, SLA reporty) a **inženýrskou kvalitu** (CI pipeline, 181 automatizovaných testů, extrahované moduly `notifier.py`/`scheduler.py`).
+Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+
+---
+
+## Co je nového ve v2026.08.001 (2026-08-03)
+
+| Funkce | Detail |
+|---|---|
+| **Testy: 938 → 1050** | 112 nových testů pokrývajících knowledge base, infra audit a dependency mapping |
+| **80/100 AI roadmap položek** | Nárůst ze 66/100 ve v2026.07 |
+| **3 kritické SSH bugy opraveny** | SSH diagnostika + remediace nefungovaly 30. 7. – 1. 8.; zcela vyřešeno |
+| **`knowledge.py`** | Runbooky, prevention hinty, tréninkové páry, přenos KB mezi instancemi |
+| **`infra_audit.py`** | Detekce config driftu, zombie procesy, expirace certů, post-reboot checklist, kontrola přesnosti dokumentace |
+| **`dependencies.py`** | Graf závislostí hostů, výpočet blast-radius, simulace odstavení |
+| **`host-setup.md`** | Nový průvodce: příprava monitorovaných hostů pro AI diagnostiku (sentinel user, sudoers, journal group) |
+
+---
+
+## Co je nového ve v2026.07.001 (2026-07-31)
+
+### AI vrstva — 21 nových modulů
+
+| Modul | Co dělá |
+|---|---|
+| `ai_guard.py` | Obrana proti prompt-injection v obsahu logů, hodinový limit akcí, detekce smyčky |
+| `ai_verify.py` | Kontrola halucinací — ověřuje AI tvrzení proti známé infrastruktuře |
+| `ai_profiles.py` | Profily kontextového okna dle typu úlohy (triage, hloubková analýza, chat) |
+| `ai_runtime.py` | Cache odpovědí, konzistence, token budget, routing modelů |
+| `diagnostics.py` | Pevný katalog read-only příkazů — AI vybírá ID příkazů, nikdy raw shell; spustí a interpretuje reálný výstup |
+| `fix_verify.py` | Verifikace opravu ~15 min po každém pokusu; selhání se zaznamenají jako anti-vzory |
+| `remediation.py` | Stupňovitý žebříček: observe → reload → restart → reboot |
+| `remediation_plan.py` | Rollback, kontextové hodnocení rizika, dry-run mód, fronta práce |
+| `policy.py` | Vysvětlení blokace, návrhy allowlistu/auto-execute |
+| `escalation.py` | Eskalace s kontextem (co bylo zkuseno a proč to selhalo) |
+| `correlate.py` | Změnová korelace, kauzální řetězce, cross-host vzory |
+| `incident_analysis.py` | Společný jmenovatel, timeline incidentu, detekce kaskád, seřazené hypotézy |
+| `trend_detect.py` | Tichá degradace (regrese + r²), detekce chybějících signálů |
+| `baseline.py` | Per-host normální profil, sezónnost, audit auth logů |
+| `alert_quality.py` | Těžba false-alarmů z historických dat |
+| `playbooks.py` | Postupy naučené z manuálních oprav — buduje institucionální paměť |
+| `foresight.py` | Kapacitní prognóza, týdenní infrastrukturní výhled |
+| `unmatched.py` | Náhodné vzorkování log řádků, které žádný plugin nezachytí |
+| `rag_utils.py` | Komprese, hybridní vyhledávání, citace, správa chunků |
+| `knowledge.py` | (preview ve v07, stabilní ve v08) |
+| `infra_audit.py` | (preview ve v07, stabilní ve v08) |
+
+### Rozsah
+
+- Testy: **317 → 938** (+621 nových testů pokrývajících celou AI vrstvu)
+- AI roadmap: **66/100** dokončeno
+- Kompletní audit trail každé AI akce
+- Všechny AI moduly plně integrovány do Scheduler maintenance smyčky
 
 ---
 
 ## Co je nového ve v2026.06.024 (oproti v2026.06.005)
-
-### Novinky ve v2026.06.023 → v2026.06.024
-
-| Funkce | Detail |
-|---|---|
-| **Veřejný `/status` dashboard** | Stránka stavu bez přihlášení: telemetrie CPU/RAM/Disk, anonymizované poslední incidenty, tabulka online/offline agentů, rozpad kategorií infra/agent/security, plně responzivní grid |
-| **Mobilní responzivita** | Issue karty přešly z inline stylů na CSS třídy (`issue-row-inner`/`issue-content-area`/`issue-actions`); sekundární akce se skryjí pod 480 px; modal overlay `flex-start` + `overflow-y:auto`, aby byl dialog vždy dosažitelný; header bar už nepřetéká |
-| **Oprava CSRF session** | CSRF token se nyní vkládá do session už při renderování — opravuje chat vracející 403 na mobilu i desktopu |
-| **Úklid kategorií** | Kategorie `UNKNOWN` normalizována na `OSTATNÍ` v issue kartách i skupinách (DB migrace existujících záznamů) |
 
 ### Bezpečnostní hardening
 
@@ -164,6 +207,15 @@ Od verze v2026.06.005 prošel projekt 17 release iteracemi zaměřenými na **be
 |---|---|
 | **AI inference** | Hailo-10H NPU (hailo-ollama) · CPU Ollama · external API · runtime přepínání modelu |
 | **RAG znalostní báze** | ChromaDB + nomic-embed-text · BM25 TF×IDF fallback · vlastní upload (.md/.txt/.pdf/.docx/.csv) · reindex jedním klikem |
+| **AI bezpečnost** | Obrana proti prompt-injection · hodinový limit akcí · detekce smyčky · kontrola halucinací · audit trail (`ai_guard.py`, `ai_verify.py`) |
+| **AI diagnostika** | Pevný read-only katalog příkazů — AI vybírá ID, nikdy raw shell; spustí a interpretuje reálný výstup (`diagnostics.py`) |
+| **AI verifikace** | Kontrola opravy ~15 min po každé remediaci; selhání se ukládají jako anti-vzory (`fix_verify.py`) |
+| **AI remediace** | Stupňovitý žebříček: observe → reload → restart → reboot · rollback · dry-run · hodnocení rizika (`remediation.py`, `remediation_plan.py`) |
+| **AI korelace** | Kauzální řetězce · změnová korelace · cross-host vzory · detekce kaskád · timelines incidentů · seřazené hypotézy (`correlate.py`, `incident_analysis.py`) |
+| **AI baselining** | Per-host normální profil · sezónnost · tichá degradace (regrese + r²) · chybějící signály (`baseline.py`, `trend_detect.py`) |
+| **AI prognózy** | Kapacitní prognóza · týdenní výhled · těžba false-alarmů · vzorkování nezachycených logů (`foresight.py`, `alert_quality.py`, `unmatched.py`) |
+| **Znalostní báze** | Runbooky · prevention hinty · tréninkové páry · přenos KB mezi instancemi (`knowledge.py`) |
+| **Infra audit** | Config drift · zombie procesy · expirace certů · post-reboot checklist · blast-radius závislostí (`infra_audit.py`, `dependencies.py`) |
 | **Hybridní telemetrie** | Pull (inotify logy) + Push (agenti přes Bearer token) · více IP adres na agenta · tracking verze agenta (SHA) |
 | **Autofix** | AI navrhne opravu → admin Schválit/Zamítnout → SSH exec na mgmt nodu · allowlist příkazů · autonomní exec |
 | **Prediktivní analytika** | TTC (Time-To-Critical) pro disky · Mann-Kendall trend test · předpověď lineární regresí · kapacitní plánování |
@@ -172,10 +224,8 @@ Od verze v2026.06.005 prošel projekt 17 release iteracemi zaměřenými na **be
 | **Prometheus** | `GET /metrics` scrape + pushgateway export; auth přes scrape_token |
 | **Dashboard** | Stat karty · interaktivní min/max/avg grafy · trend chart · donut · health trend · flapping widget · live hodiny |
 | **Autentizace** | viewer / admin / superadmin · LDAP (lldap + OpenLDAP) · **2FA/TOTP** · **bcrypt** · rate-limit + IP ban · **CSRF** |
-| **Issues UI** | Bulk select · filtrování · group-collapse · printable report · CSV export · historie · pravidla potlačení · tagy · severity · počítadlo výskytů · batch AI analýza · fullscreen · štítky · inline komentáře |
 | **Workflow issues** | `active` → `acknowledged` → `validating` → `resolved` · eskalační pravidla · lifecycle webhooky |
 | **Auto-remediace** | Jednorázová SSH oprava · allowed_commands s `auto_execute` · AUTOFAIL issues · SSH jump host (ProxyJump) · Ansible runner |
-| **REST API klíče** | Jemné scopes (`read:issues`, `write:actions`, `admin:users`) · SHA-256 hash v DB · UI v Settings |
 | **Plugin hot-reload** | `POST /api/plugins/reload` · SIGHUP plný reload · Pattern Editor s regex testerem + AI návrhy patternů |
 | **Telemetrie** | Detekce anomálií (3σ) · pevné thresholdy · per-agent thresholdy · InfluxDB export · heatmap · health score historie |
 | **Topologie** | Mapa topologie agentů · graf závislostí pluginů · SNMP CDP/LLDP · Canvas force-directed graf |
@@ -225,6 +275,33 @@ Od verze v2026.06.005 prošel projekt 17 release iteracemi zaměřenými na **be
 | `analytics.py` | TTC, Mann-Kendall, Z-Score, health score, forecast |
 | `topology.py` | Topologie agentů, SNMP CDP/LLDP |
 | `routes/` | Flask Blueprints: main, issues, agents, actions, system, export, integrations, chat |
+
+### AI vrstva (v2026.07+)
+
+| Soubor | Zodpovědnost |
+|---|---|
+| `ai_guard.py` | Obrana proti prompt-injection, limit akcí, detekce smyčky |
+| `ai_verify.py` | Kontrola halucinací proti známé infrastruktuře |
+| `ai_profiles.py` | Profily kontextového okna dle typu úlohy |
+| `ai_runtime.py` | Cache odpovědí, konzistence, token budget, routing modelů |
+| `diagnostics.py` | Pevný katalog read-only příkazů — AI vybírá ID, nikdy raw shell |
+| `fix_verify.py` | Verifikace opravy po remediaci; selhání se ukládají jako anti-vzory |
+| `remediation.py` | Stupňovitý žebříček remediace s rollbackem |
+| `remediation_plan.py` | Hodnocení rizika, dry-run, fronta práce |
+| `policy.py` | Vysvětlení blokace, návrhy allowlistu/auto-execute |
+| `escalation.py` | Eskalace s kontextem předchozích pokusů |
+| `correlate.py` | Změnová korelace, kauzální řetězce, cross-host vzory |
+| `incident_analysis.py` | Timeline, detekce kaskád, seřazené hypotézy |
+| `trend_detect.py` | Tichá degradace, chybějící signály |
+| `baseline.py` | Per-host normální profil, sezónnost, audit auth logů |
+| `alert_quality.py` | Těžba false-alarmů z historických dat |
+| `playbooks.py` | Postupy naučené z manuálních oprav |
+| `foresight.py` | Kapacitní prognóza, týdenní výhled |
+| `unmatched.py` | Vzorkování nezachycených log řádků |
+| `rag_utils.py` | Komprese, hybridní vyhledávání, citace, správa chunků |
+| `knowledge.py` | Runbooky, prevention hinty, přenos KB |
+| `infra_audit.py` | Config drift, zombie procesy, certifikáty, post-reboot check |
+| `dependencies.py` | Graf závislostí hostů, blast-radius, simulace odstavení |
 
 ---
 

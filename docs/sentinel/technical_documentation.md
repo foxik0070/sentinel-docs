@@ -1,4 +1,4 @@
-# Sentinel Commander — Technical Documentation (v2026.06.024)
+# Sentinel Commander — Technical Documentation (v2026.08.001)
 
 Intended for system architects, L3 support, and infrastructure administrators. Covers internal mechanisms, daemon stability, memory management, and OS integration.
 
@@ -43,6 +43,28 @@ ChromaDB requires SQLite ≥ 3.35.0. On older RHEL systems, `__main__.py` dynami
 │   ├── syslog_receiver.py  ← Syslog UDP/TCP receiver
 │   ├── safety.py           ← command classifier, allowed_commands
 │   ├── utils.py            ← rate-limit, IP ban, JSON logging, int_param()
+│   ├── ai_guard.py         ← prompt-injection defence, action cap, loop detection
+│   ├── ai_verify.py        ← hallucination check against known infra
+│   ├── ai_profiles.py      ← context-window profiles per task type
+│   ├── ai_runtime.py       ← response cache, consistency, token budget, routing
+│   ├── diagnostics.py      ← fixed read-only command catalog (AI picks IDs, not shell)
+│   ├── fix_verify.py       ← post-fix verification; failures as anti-patterns
+│   ├── remediation.py      ← graduated ladder: observe→reload→restart→reboot
+│   ├── remediation_plan.py ← rollback, risk, dry-run, work queue
+│   ├── policy.py           ← block explanation, allowlist/auto-execute proposals
+│   ├── escalation.py       ← escalation with prior-attempt context
+│   ├── correlate.py        ← change correlation, causal chains
+│   ├── incident_analysis.py← timeline, cascades, ranked hypotheses
+│   ├── trend_detect.py     ← silent degradation, missing signals
+│   ├── baseline.py         ← per-host normal profile, seasonality
+│   ├── alert_quality.py    ← false-alarm mining
+│   ├── playbooks.py        ← procedures from manual fixes
+│   ├── foresight.py        ← capacity forecast, weekly outlook
+│   ├── unmatched.py        ← sampling of uncaught log lines
+│   ├── rag_utils.py        ← hybrid search, citations, chunking
+│   ├── knowledge.py        ← runbooks, prevention hints, KB transfer
+│   ├── infra_audit.py      ← config drift, zombies, certs, post-reboot check
+│   ├── dependencies.py     ← host dependency graph, blast-radius, shutdown sim
 │   ├── routes/             ← Flask Blueprints
 │   │   ├── main.py         ← login (2FA flow), dashboard
 │   │   ├── issues.py
@@ -61,7 +83,7 @@ ChromaDB requires SQLite ≥ 3.35.0. On older RHEL systems, `__main__.py` dynami
 ├── config.yaml.example
 ├── Makefile                ← make lint / test / build / ci
 ├── .gitea/workflows/ci.yml ← CI pipeline (pytest + node --check + build)
-└── tests/                  ← 181 tests (route, security, integration, benchmark)
+└── tests/                  ← 1050 tests (route, security, integration, AI layer, benchmark)
 
 /etc/sentinel/
 └── config.yaml             ← hot-reloadable configuration (jsonschema-validated)
@@ -202,7 +224,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 
 ## CI & Test Suite
 
-- **181 tests**: Flask route tests, security tests (brute force, API scopes, hostname injection, secrets masking), integration tests (full issue lifecycle on a real DB), dashboard performance benchmark
+- **1050 tests**: Flask route tests, security tests (brute force, API scopes, hostname injection, secrets masking), integration tests (full issue lifecycle on a real DB), dashboard performance benchmark
 - **CI:** Gitea Actions (`.gitea/workflows/ci.yml`) — pytest + `node --check` + `make build`; local `pre-push` git hook
 - **Lint:** ruff (`pyproject.toml`), ESLint with `no-redeclare=error`; `make ci` runs lint + tests
 - **Build artefacts:** `.min.js` files are built at deploy time and excluded from git

@@ -200,3 +200,4 @@ nav:
       - API Reference: API.md
       - Deployment Guide: DEPLOYMENT.md
       - Troubleshooting: TROUBLESHOOTING.md
+      - Host Setup (AI): host-setup.md
