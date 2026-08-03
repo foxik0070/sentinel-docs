@@ -1,6 +1,6 @@
 site_name: Sentinel Documentation
-site_url: https://sentinel-docs.example.com/
-site_description: "Sentinel Commander v2026.06 — Hybrid AI Monitoring for HPC & Enterprise Linux"
+site_url: https://sentinel-docs.foxik-iot.cz/
+site_description: "Sentinel Commander v2026.08.001 — Hybrid AI Log Monitor & Analyzer for Linux Infrastructure"
 site_author: FoxiK
 copyright: "FoxiK 2026 · foxik0070@gmail.com"
 
