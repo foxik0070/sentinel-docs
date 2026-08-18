@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.08.001)
+# Sentinel Commander — Documentation (v2026.08.003)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.001
+                    v2026.08.003
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,7 +43,21 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.08.003 the system has accumulated **1 087 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+
+---
+
+## What's New in v2026.08.003 (2026-08-17)
+
+| Feature | Detail |
+|---|---|
+| **Issue lifecycle auto-close** | Four mechanisms: age cap for event-type issues, detector reconciliation (HA, capacity), periodic auto-recheck, and tighter `system_detector` matching (word-boundary regexes + configurable ignore-list). Production: **47 → 21 active issues** |
+| **Reasoning models in chat** | API key detection for v1 interface; `reasoning_content` streamed with a `reasoning` flag and rendered in a muted block above the answer |
+| **Mobile UI fixes** | Issue cards and modal on mobile were clipped/unreadable — shared CSS classes, secondary actions hidden under 480 px, `.issue-msg` excluded from badge truncation |
+| **Dead `scheduler.py` removed** | Module was never imported; it referenced three non-existent symbols. Two real fixes (retention constant, auto-recheck hookup) were silently stuck inside it. Functional tasks moved to `chat_service.py` loop and new `issue_lifecycle.py` |
+| **Three scheduled tasks now actually run** | Hourly joke, DNS check, daily AI digest — all existed but were only scheduled in the dead module |
+| **Memory leak fixes** | `_GEO_CACHE` hourly prune and `user_sessions` GC now run (were the only cleanup paths, both stuck in dead scheduler) |
+| **Tests: 1 050 → 1 087** | New `test_issue_lifecycle.py` (21 tests); total 1 087 |
 
 ---
 
@@ -51,7 +65,7 @@ As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80
 
 | Feature | Detail |
 |---|---|
-| **Tests: 938 → 1050** | 112 new tests covering knowledge base, infra audit, and dependency mapping modules |
+| **Tests: 938 → 1 050** | 112 new tests covering knowledge base, infra audit, and dependency mapping modules |
 | **80/100 AI roadmap items** | Up from 66/100 in v2026.07 |
 | **3 critical SSH bugs fixed** | SSH broken July 30–Aug 1 in diagnostics + remediation; fully resolved |
 | **`knowledge.py`** | Runbooks, prevention hints, training pairs, KB transfer to/from other instances |
@@ -94,7 +108,7 @@ As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80
 - Tests: **317 → 938** (+621 new tests covering the full AI layer)
 - AI roadmap: **66/100** items complete
 - Full decision audit trail for every AI action
-- All AI modules fully integrated into the Scheduler maintenance loop
+- All AI modules fully integrated into the maintenance loop (`chat_service.py` + `issue_lifecycle.py`)
 
 ---
 
@@ -137,7 +151,7 @@ As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80
 
 ### Engineering Quality
 
-- **181 automated tests** (v2026.06.024 baseline) — now 1 050 in v2026.08.001
+- **1 087 automated tests** (v2026.08.003) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 
@@ -195,8 +209,8 @@ As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80
                          │                                  │
          ┌───────────────┼───────────────┐         ┌────────┴────────┐
          ▼               ▼               ▼         ▼                 ▼
-  hailo-ollama      Ollama CPU      external   scheduler.py     notifier.py
-  (NPU :8000)       (:11434)        API        (maintenance)    (13 channels)
+  hailo-ollama      Ollama CPU      external   issue_lifecycle   notifier.py
+  (NPU :8000)       (:11434)        API        + maintenance    (13 channels)
 ```
 
 ### Core modules
@@ -212,7 +226,7 @@ As of v2026.08.001 the system has accumulated **1 050 automated tests** and **80
 | `rag.py` | ChromaDB, nomic-embed-text, BM25 fallback |
 | `actions.py` | Autofix lifecycle — create, approve, reject, SSH exec |
 | `notifier.py` | All outbound notifications + retry queue + throttling |
-| `scheduler.py` | Background maintenance (minute / hourly / nightly tiers) |
+| `issue_lifecycle.py` | Issue auto-close: age cap, detector reconciliation, periodic auto-recheck |
 | `ssh_utils.py` | Central SSH security — `build_ssh_cmd()`, host key scanning |
 | `analytics.py` | TTC, Mann-Kendall, Z-Score, health score, forecast |
 | `topology.py` | Agent topology builder, SNMP CDP/LLDP |

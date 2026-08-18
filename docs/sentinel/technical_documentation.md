@@ -1,4 +1,4 @@
-# Sentinel Commander — Technical Documentation (v2026.08.001)
+# Sentinel Commander — Technical Documentation (v2026.08.003)
 
 Intended for system architects, L3 support, and infrastructure administrators. Covers internal mechanisms, daemon stability, memory management, and OS integration.
 
@@ -35,7 +35,7 @@ ChromaDB requires SQLite ≥ 3.35.0. On older RHEL systems, `__main__.py` dynami
 │   ├── rag.py              ← ChromaDB, nomic-embed-text, BM25 fallback
 │   ├── actions.py          ← Autofix lifecycle, SSH exec, ProxyJump
 │   ├── notifier.py         ← 13 outbound channels, retry queue, per-severity throttle
-│   ├── scheduler.py        ← background maintenance (minute/hourly/nightly)
+│   ├── issue_lifecycle.py   ← issue auto-close: age cap, reconciliation, auto-recheck
 │   ├── ssh_utils.py        ← build_ssh_cmd(), host-key scanning (accept-new)
 │   ├── analytics.py        ← TTC, Mann-Kendall, Z-Score, health score, forecast
 │   ├── topology.py         ← agent topology, SNMP CDP/LLDP
@@ -83,7 +83,7 @@ ChromaDB requires SQLite ≥ 3.35.0. On older RHEL systems, `__main__.py` dynami
 ├── config.yaml.example
 ├── Makefile                ← make lint / test / build / ci
 ├── .gitea/workflows/ci.yml ← CI pipeline (pytest + node --check + build)
-└── tests/                  ← 1050 tests (route, security, integration, AI layer, benchmark)
+└── tests/                  ← 1087 tests (route, security, integration, AI layer, issue lifecycle, benchmark)
 
 /etc/sentinel/
 └── config.yaml             ← hot-reloadable configuration (jsonschema-validated)
@@ -172,7 +172,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 
 **WAL tuning:** `wal_autocheckpoint=200`, `PRAGMA synchronous=NORMAL`, explicit checkpoint after telemetry prune. The DB lives **outside** any inotify-watched directory (a watched DB file caused HPC instability).
 
-**Garbage collection** (`scheduler.py`): batched deletion (LIMIT 1000) to avoid WAL lock contention; `prune_issue_history(days=90)`; `VACUUM` after > 10 000 deleted rows. Default retention: telemetry 2 days, resolved issues 2 days, issue history 90 days.
+**Garbage collection** (maintenance loop in `chat_service.py`): batched deletion (LIMIT 1000) to avoid WAL lock contention; `prune_issue_history(days=90)`; `VACUUM` after > 10 000 deleted rows. Default retention: telemetry 2 days, resolved issues 2 days, issue history 90 days. Additionally, `issue_lifecycle.py` runs periodic auto-recheck, age-based event issue expiry, and detector reconciliation.
 
 **Caching:** `get_active_issues()` has a 5 s TTL in-memory cache guarded by a double-checked `threading.Lock` (fast lock-free read path, locked rebuild); dashboard sparkline queries cache for 5 min.
 
@@ -224,7 +224,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 
 ## CI & Test Suite
 
-- **1050 tests**: Flask route tests, security tests (brute force, API scopes, hostname injection, secrets masking), integration tests (full issue lifecycle on a real DB), dashboard performance benchmark
+- **1087 tests**: Flask route tests, security tests (brute force, API scopes, hostname injection, secrets masking), integration tests (full issue lifecycle on a real DB), issue lifecycle auto-close tests, dashboard performance benchmark
 - **CI:** Gitea Actions (`.gitea/workflows/ci.yml`) — pytest + `node --check` + `make build`; local `pre-push` git hook
 - **Lint:** ruff (`pyproject.toml`), ESLint with `no-redeclare=error`; `make ci` runs lint + tests
 - **Build artefacts:** `.min.js` files are built at deploy time and excluded from git

@@ -1,4 +1,4 @@
-# Sentinel Commander — Technická dokumentace (v2026.08.001)
+# Sentinel Commander — Technická dokumentace (v2026.08.003)
 
 Určeno pro systémové architekty, L3 support a infrastrukturní administrátory. Pokrývá interní mechanismy, stabilitu daemona, správu paměti a OS integraci.
 
@@ -35,7 +35,7 @@ ChromaDB vyžaduje SQLite ≥ 3.35.0. Na starších RHEL systémech `__main__.py
 │   ├── rag.py              ← ChromaDB, nomic-embed-text, BM25 fallback
 │   ├── actions.py          ← lifecycle autofixu, SSH exec, ProxyJump
 │   ├── notifier.py         ← 13 odchozích kanálů, retry fronta, throttle per severity
-│   ├── scheduler.py        ← background maintenance (minutová/hodinová/noční)
+│   ├── issue_lifecycle.py   ← auto-zavírání issues: strop stáří, rekonciliace, auto-recheck
 │   ├── ssh_utils.py        ← build_ssh_cmd(), sken host klíčů (accept-new)
 │   ├── analytics.py        ← TTC, Mann-Kendall, Z-Score, health score, forecast
 │   ├── topology.py         ← topologie agentů, SNMP CDP/LLDP
@@ -83,7 +83,7 @@ ChromaDB vyžaduje SQLite ≥ 3.35.0. Na starších RHEL systémech `__main__.py
 ├── config.yaml.example
 ├── Makefile                ← make lint / test / build / ci
 ├── .gitea/workflows/ci.yml ← CI pipeline (pytest + node --check + build)
-└── tests/                  ← 1050 testů (route, security, integrační, AI vrstva, benchmark)
+└── tests/                  ← 1087 testů (route, security, integrační, AI vrstva, issue lifecycle, benchmark)
 
 /etc/sentinel/
 └── config.yaml             ← hot-reloadovatelná konfigurace (validace jsonschema)
@@ -172,7 +172,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 
 **WAL tuning:** `wal_autocheckpoint=200`, `PRAGMA synchronous=NORMAL`, explicitní checkpoint po prune telemetrie. DB leží **mimo** jakýkoliv inotify-watched adresář (sledovaný DB soubor způsoboval nestabilitu na HPC).
 
-**Garbage collection** (`scheduler.py`): dávkové mazání (LIMIT 1000) proti WAL lock kontenci; `prune_issue_history(days=90)`; `VACUUM` po > 10 000 smazaných řádcích. Výchozí retence: telemetrie 2 dny, vyřešené issues 2 dny, historie issues 90 dní.
+**Garbage collection** (údržbová smyčka v `chat_service.py`): dávkové mazání (LIMIT 1000) proti WAL lock kontenci; `prune_issue_history(days=90)`; `VACUUM` po > 10 000 smazaných řádcích. Výchozí retence: telemetrie 2 dny, vyřešené issues 2 dny, historie issues 90 dní. Navíc `issue_lifecycle.py` spouští periodický auto-recheck, expiraci event-typů dle stáří a rekonciliaci detektorů.
 
 **Cachování:** `get_active_issues()` má 5s TTL in-memory cache chráněnou double-checked `threading.Lock` (rychlá čtecí cesta bez locku, rebuild pod lockem); dashboard sparkline dotazy se cachují 5 min.
 
@@ -224,7 +224,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 
 ## CI a testovací sada
 
-- **1050 testů**: Flask route testy, security testy (brute force, API scopes, hostname injection, maskování secrets), integrační testy (celý lifecycle issue na reálné DB), výkonnostní benchmark dashboardu
+- **1087 testů**: Flask route testy, security testy (brute force, API scopes, hostname injection, maskování secrets), integrační testy (celý lifecycle issue na reálné DB), testy auto-zavírání issues, výkonnostní benchmark dashboardu
 - **CI:** Gitea Actions (`.gitea/workflows/ci.yml`) — pytest + `node --check` + `make build`; lokální `pre-push` git hook
 - **Lint:** ruff (`pyproject.toml`), ESLint s `no-redeclare=error`; `make ci` spouští lint + testy
 - **Build artefakty:** `.min.js` soubory se buildí při deployi a v gitu nejsou

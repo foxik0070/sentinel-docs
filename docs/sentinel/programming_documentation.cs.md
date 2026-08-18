@@ -1,4 +1,4 @@
-# Sentinel Commander — Programátorská dokumentace (v2026.06.024)
+# Sentinel Commander — Programátorská dokumentace (v2026.08.003)
 
 Určeno pro vývojáře a DevOps inženýry píšící vlastní detekční pluginy, integrující Sentinel s externími nástroji nebo upravující jádro systému.
 
@@ -97,9 +97,16 @@ send_notification(title, message, severity="critical", channel="security")
 - Respektuje per-detektor (`notify:` v YAML) a per-kanál toggles
 - Jméno instance v prefixu všech titulků: `[Instance] CHANNEL alert`
 
-### Scheduler (`scheduler.py`)
+### Issue Lifecycle (`issue_lifecycle.py`)
 
-Background maintenance smyčka extrahovaná z `ChatService`, tři úrovně — minutová (FIM, heartbeat URL, self-metriky), hodinová (session GC, geo-IP cache, joke log), noční (prune, VACUUM, týdenní digest).
+Mechanismy pro automatické zavírání issues, které už neplatí, integrované do údržbové smyčky v `chat_service.py`:
+
+- **`resolve_aged_event_issues()`** — archivuje event-typy issues (např. `SYS_ERR|host`) starší než `EVENT_ISSUE_MAX_AGE_HOURS` (výchozí 48). Tyto issues agregují události a obnovují `last_seen` při každé nové události, takže TTL-based úklid na ně nikdy nedosáhne.
+- **`reconcile_detector_issues()`** — opt-in per detektor přes `api.reconcile_issues`. Zavírá issues, jejichž klíč nebyl nahlášen v posledním kompletním skenu. Zapnuto jen pro detektory, které vidí celý stav v jednom běhu (`ha_detector`, `capacity_detector`).
+- **`auto_recheck_pass()`** — periodicky přehodnocuje aktivní issues pomocí recheck pravidel specifických pro detektor. Zavírá jen issues s verdiktem `RESOLVED`; nejisté případy nechává na manuální posouzení.
+- **Vylepšení `system_detector`** — regexy s hranicemi slov a konfigurovatelným ignore-listem nahrazují starý substring match, čímž se redukují falešné pozitivy z benigního šumu v logách.
+
+Údržba na pozadí (FIM, heartbeat URL, self-metriky, session GC, prořezání geo-IP cache, noční prune/VACUUM) běží přímo v `chat_service.py` daily_cleanup_loop.
 
 ---
 

@@ -1,4 +1,4 @@
-# Sentinel Commander — User Guide (v2026.06.024)
+# Sentinel Commander — User Guide (v2026.08.003)
 
 Intended for operators, administrators, and security technicians interacting with Sentinel via the web interface or the mobile app.
 

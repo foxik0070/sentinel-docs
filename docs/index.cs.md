@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.08.001)
+# Sentinel Commander — Dokumentace (v2026.08.003)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.001
+                    v2026.08.003
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,7 +43,21 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.08.003 systém obsahuje **1 087 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+
+---
+
+## Co je nového ve v2026.08.003 (2026-08-17)
+
+| Funkce | Detail |
+|---|---|
+| **Issue lifecycle auto-close** | Čtyři mechanismy: strop stáří pro event-typy, rekonciliace detektorů (HA, kapacita), periodický auto-recheck a přísnější matchování v `system_detector` (regexy s hranicemi slov + konfigurovatelný ignore-list). Produkce: **47 → 21 aktivních issues** |
+| **Reasoning modely v chatu** | Detekce API klíče pro v1 rozhraní; `reasoning_content` streamovaný s příznakem `reasoning`, vykreslovaný do ztlumeného bloku nad odpovědí |
+| **Opravy mobilního UI** | Issue karty a modal na mobilu byly nečitelné/oříznuté — sdílené CSS třídy, sekundární akce schovány pod 480 px, `.issue-msg` vyloučen z badge truncation |
+| **Smazán mrtvý `scheduler.py`** | Modul nikdo neimportoval; odkazoval na tři neexistující symboly. Dvě reálné opravy (konstanta retence, napojení auto-rechecku) v něm tiše uvízly. Funkční úlohy přesunuty do smyčky `chat_service.py` a nového `issue_lifecycle.py` |
+| **Tři plánované úlohy konečně běží** | Hodinový vtip, kontrola DNS, denní AI digest — existovaly, ale plán měly jen v mrtvém modulu |
+| **Opravy memory leaků** | Hodinové prořezání `_GEO_CACHE` a GC `user_sessions` nyní běží (byly to jediné úklidové cesty, obě uvízlé v mrtvém scheduleru) |
+| **Testy: 1 050 → 1 087** | Nový `test_issue_lifecycle.py` (21 testů); celkem 1 087 |
 
 ---
 
@@ -51,7 +65,7 @@ Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80
 
 | Funkce | Detail |
 |---|---|
-| **Testy: 938 → 1050** | 112 nových testů pokrývajících knowledge base, infra audit a dependency mapping |
+| **Testy: 938 → 1 050** | 112 nových testů pokrývajících knowledge base, infra audit a dependency mapping |
 | **80/100 AI roadmap položek** | Nárůst ze 66/100 ve v2026.07 |
 | **3 kritické SSH bugy opraveny** | SSH diagnostika + remediace nefungovaly 30. 7. – 1. 8.; zcela vyřešeno |
 | **`knowledge.py`** | Runbooky, prevention hinty, tréninkové páry, přenos KB mezi instancemi |
@@ -94,7 +108,7 @@ Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80
 - Testy: **317 → 938** (+621 nových testů pokrývajících celou AI vrstvu)
 - AI roadmap: **66/100** dokončeno
 - Kompletní audit trail každé AI akce
-- Všechny AI moduly plně integrovány do Scheduler maintenance smyčky
+- Všechny AI moduly plně integrovány do údržbové smyčky (`chat_service.py` + `issue_lifecycle.py`)
 
 ---
 
@@ -193,10 +207,10 @@ Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **118 automatizovaných testů** — route testy, security testy (brute force, scopes, hostname injection, maskování secrets), integrační testy (celý lifecycle issue na reálné DB), benchmark dashboardu
+- **1 087 automatizovaných testů** (v2026.08.003) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
-- **Refaktoring** — `notifier.py` (všechny odchozí kanály), `scheduler.py` (3úrovňová maintenance smyčka) a `ssh_utils.py` extrahovány z `chat_service.py`
+- **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`
 - **CONTRIBUTING.md** — diagram architektury, vývojový workflow, bezpečnostní pravidla
 
 ---
@@ -253,8 +267,8 @@ Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80
                          │                                  │
          ┌───────────────┼───────────────┐         ┌────────┴────────┐
          ▼               ▼               ▼         ▼                 ▼
-  hailo-ollama      Ollama CPU      external   scheduler.py     notifier.py
-  (NPU :8000)       (:11434)        API        (maintenance)    (13 kanálů)
+  hailo-ollama      Ollama CPU      external   issue_lifecycle   notifier.py
+  (NPU :8000)       (:11434)        API        + maintenance    (13 kanálů)
 ```
 
 ### Hlavní moduly
@@ -270,7 +284,7 @@ Ve verzi v2026.08.001 systém obsahuje **1 050 automatizovaných testů** a **80
 | `rag.py` | ChromaDB, nomic-embed-text, BM25 fallback |
 | `actions.py` | Lifecycle autofixu — create, approve, reject, SSH exec |
 | `notifier.py` | Všechny odchozí notifikace + retry fronta + throttling |
-| `scheduler.py` | Background maintenance (minutová / hodinová / noční úroveň) |
+| `issue_lifecycle.py` | Auto-zavírání issues: strop stáří, rekonciliace detektorů, periodický auto-recheck |
 | `ssh_utils.py` | Centrální SSH bezpečnost — `build_ssh_cmd()`, sken host klíčů |
 | `analytics.py` | TTC, Mann-Kendall, Z-Score, health score, forecast |
 | `topology.py` | Topologie agentů, SNMP CDP/LLDP |

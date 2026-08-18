@@ -1,4 +1,4 @@
-# Sentinel Commander — Uživatelská příručka (v2026.06.024)
+# Sentinel Commander — Uživatelská příručka (v2026.08.003)
 
 Určeno pro operátory, administrátory a bezpečnostní techniky pracující se Sentinelem přes webové rozhraní nebo mobilní aplikaci.
 

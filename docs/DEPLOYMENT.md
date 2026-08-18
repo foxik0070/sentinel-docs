@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Deployment Guide (v2026.06.024)
+# Sentinel Ecosystem — Deployment Guide (v2026.08.003)
 
 Complete guide for deploying the entire Sentinel monitoring ecosystem in production.
 

@@ -1,4 +1,4 @@
-# Sentinel Commander — Programmer Documentation (v2026.06.024)
+# Sentinel Commander — Programmer Documentation (v2026.08.003)
 
 Intended for developers and DevOps engineers writing custom detection plugins, integrating Sentinel with external tools, or modifying the system core.
 
@@ -97,9 +97,16 @@ send_notification(title, message, severity="critical", channel="security")
 - Respects per-detector (`notify:` in YAML) and per-channel toggles
 - Instance name prefixed to all titles: `[Instance] CHANNEL alert`
 
-### Scheduler (`scheduler.py`)
+### Issue Lifecycle (`issue_lifecycle.py`)
 
-Background maintenance loop extracted from `ChatService`, with three tiers — minute (FIM, heartbeat URLs, self-metrics), hourly (session GC, geo-IP cache, joke log), nightly (prune, VACUUM, weekly digest).
+Auto-close mechanisms for issues that no longer apply, integrated into the maintenance loop in `chat_service.py`:
+
+- **`resolve_aged_event_issues()`** — archives event-type issues (e.g. `SYS_ERR|host`) older than `EVENT_ISSUE_MAX_AGE_HOURS` (default 48). These issues aggregate events and refresh `last_seen` on every new event, so TTL-based cleanup never reaches them.
+- **`reconcile_detector_issues()`** — opt-in per detector via `api.reconcile_issues`. Closes issues whose key was not reported in the latest full-state scan. Only enabled for detectors that see the complete state in one run (`ha_detector`, `capacity_detector`).
+- **`auto_recheck_pass()`** — periodically re-evaluates active issues using detector-specific recheck rules. Closes only issues with a definitive `RESOLVED` verdict; uncertain cases are left for manual review.
+- **`system_detector` improvements** — word-boundary regexes with a configurable ignore-list replace the old substring match, reducing false positives from benign log noise.
+
+Background maintenance (FIM, heartbeat URLs, self-metrics, session GC, geo-IP cache prune, nightly prune/VACUUM) runs directly in the `chat_service.py` daily_cleanup_loop.
 
 ---
 
