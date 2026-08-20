@@ -1,4 +1,4 @@
-# Sentinel Commander — Technická dokumentace (v2026.08.003)
+# Sentinel Commander — Technická dokumentace (v2026.08.006)
 
 Určeno pro systémové architekty, L3 support a infrastrukturní administrátory. Pokrývá interní mechanismy, stabilitu daemona, správu paměti a OS integraci.
 
@@ -140,6 +140,8 @@ GET /api/health
 **SIGHUP** spouští stejný plný reload — config **i** watcher patterns **i** pluginy (`DETECTORS`, `LOG_GROUPS`). Log level lze měnit za běhu bez reloadu přes `/api/admin/log_level`.
 
 **Validace schématu:** kritické klíče (`web.port`, `worker_threads`, `db_retention_days`, …) se validují přes `jsonschema`; neplatný config je odmítnut místo polovičního aplikování.
+
+**Cluster detekce (v2026.08.006):** `host_cluster_rules` v config.yaml mapuje hostname na clustery přes substring patterny. `api.get_cluster_from_host()` je sdílená lookup funkce používaná všemi pluginy (`detector_icinga`, `detector_who`, atd.). Priorita: explicitní pole `cluster` v issue → prefix `[CLUSTERNAME]` v `last_line` → konfigurační pravidla → `default_cluster` (výchozí `INFRA`). Plugin-specifické parametry: `detector_icinga` podporuje `ignored_host_services` (seznam `service_pattern@host_pattern`) pro potlačení false positives; `detector_cluster` podporuje `slurmctld_threshold` (po sobě jdoucí DOWN pingy před nahlášením).
 
 ---
 

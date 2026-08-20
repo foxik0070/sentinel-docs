@@ -1,4 +1,4 @@
-# Sentinel Commander — Programmer Documentation (v2026.08.003)
+# Sentinel Commander — Programmer Documentation (v2026.08.006)
 
 Intended for developers and DevOps engineers writing custom detection plugins, integrating Sentinel with external tools, or modifying the system core.
 
@@ -80,6 +80,7 @@ detectors:
 | `save_telemetry_snapshot(metric, value, host)` | Write a time-series data point (buffered/batched). |
 | `get_infrastructure_label(file_path)` | Extract `SERVER: <hostname>` context from the log line prefix. |
 | `add_root_audit(server, ip)` | Idempotent root-session audit entry with reverse DNS. |
+| `get_cluster_from_host(hostname)` | Derive cluster name from hostname using `host_cluster_rules` config (v2026.08.006). Shared by all plugins. |
 | `notify_teams(message, channel)` | Send a Teams webhook message directly (bypass queue). |
 
 ### Notifier (`notifier.py`)

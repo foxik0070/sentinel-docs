@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.08.003)
+# Sentinel Commander — Documentation (v2026.08.006)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.003
+                    v2026.08.006
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,7 +43,26 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.08.003 the system has accumulated **1 087 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.08.006 the system has accumulated **1 087 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+
+---
+
+## What's New in v2026.08.006 (2026-08-19)
+
+| Feature | Detail |
+|---|---|
+| **Watchdog ABRT crash fix (critical)** | Sentinel crashed every 5–38 min with `Failed with result 'watchdog'`. Root cause: non-blocking socket for systemd notify — under WebSocket thread load, `EAGAIN` was silently swallowed, all pings lost, systemd sent SIGABRT after 120 s. Fix: `sock.settimeout(1.0)` — send waits max 1 s, then recovers the socket. Pings never get dropped |
+| **Configurable cluster detection** | `host_cluster_rules` in config.yaml — list of `{pattern, cluster}` rules for mapping hostnames to clusters. Priority: explicit `cluster` field → `[CLUSTERNAME]` prefix in `last_line` → config rules → `default_cluster`. No hardcoded cluster names |
+| **`api.get_cluster_from_host()`** | Shared function in `sentinel/api.py` — plugins call it instead of their own hardcoded `_cluster_from_host()` methods. `detector_icinga` and `detector_who` migrated |
+| **`ignored_host_services`** | New param in `detector_icinga` config — suppresses specific services on specific hosts (`service_pattern@host_pattern`). Eliminates false positives for services that don't run on certain node types |
+| **Stale ROOT sessions after restart** | `detector_who`: after restart, `_scan_prev` was empty → stale sessions from DB never closed. Fixed by seeding from `api.get_active_keys()` at first scan |
+| **Slurmctld debounce** | `detector_cluster`: `Slurmctld ping: DOWN` reported only after `slurmctld_threshold` (default 2) consecutive DOWN scans — transient ping failures no longer create issues |
+| **Issue buttons fix** | Delete/ignore buttons in issue modals now call direct REST endpoints (`/api/issues/<key>/delete`, `/api/issues/<key>/ignore`) instead of routing through chat |
+| **2-level issue grouping** | Incident Matrix and all modals group issues into CLUSTER → DETECTOR tree. Cluster folders always open, detector folders collapse at ≥5 issues |
+| **Folder state preserved** | Modal auto-refresh (3 s) now tracks explicitly closed folders — they stay closed across refreshes |
+| **Agent systemd unit names** | `agent_systemd_global_monitor`: `--plain` flag + position `[1]` parsing — shows actual unit names instead of `●, ●, ●` |
+| **Missing plugins deployed** | Only 4/15 plugins were deployed. `deploy-auto.sh` now syncs all `detector_*.py` and protects them from deletion |
+| **Teams test notifications removed** | `__main__.py` no longer sends to non-existent `tests` channel on startup/shutdown |
 
 ---
 
@@ -151,7 +170,7 @@ As of v2026.08.003 the system has accumulated **1 087 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 087 automated tests** (v2026.08.003) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 087 automated tests** (v2026.08.006) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 
@@ -172,7 +191,7 @@ As of v2026.08.003 the system has accumulated **1 087 automated tests** and **80
 | **AI Foresight** | Capacity forecast · weekly outlook · false-alarm mining · unmatched log sampling (`foresight.py`, `alert_quality.py`, `unmatched.py`) |
 | **Knowledge Base** | Runbooks · prevention hints · training pairs · KB transfer between instances (`knowledge.py`) |
 | **Infra Audit** | Config drift · zombie processes · cert expiry · post-reboot checklist · docs accuracy check · dependency blast-radius (`infra_audit.py`, `dependencies.py`) |
-| **Hybrid Telemetry** | Pull (inotify logs) + Push (agents via Bearer token) · multiple IPs per agent · agent version tracking (SHA) |
+| **Hybrid Telemetry** | Pull (inotify logs) + Push (agents via Bearer token) · multiple IPs per agent · agent version tracking (SHA) · version drift badge in agent detail |
 | **Autofix** | AI proposes fix → admin Approve/Reject → SSH exec on mgmt node · allowed-commands allowlist · autonomous exec |
 | **Predictive Analytics** | TTC (Time-To-Critical) for disks · Mann-Kendall trend test · linear regression forecast · capacity planning |
 | **Security Profiler** | Brute-force, sudo abuse, CVE scan, unauthorised ports, honeypot, FIM, SSL expiry |
@@ -180,7 +199,7 @@ As of v2026.08.003 the system has accumulated **1 087 automated tests** and **80
 | **Prometheus** | `GET /metrics` scrape + pushgateway export; auth via scrape_token |
 | **Dashboard** | Stat cards · interactive min/max/avg charts · trend chart · donut · health trend · flapping widget · live clock |
 | **Auth** | viewer / admin / superadmin · LDAP (lldap + OpenLDAP) · **2FA/TOTP** · **bcrypt** · rate-limit + IP ban · **CSRF** |
-| **Issue Workflow** | `active` → `acknowledged` → `validating` → `resolved` · escalation rules · lifecycle webhooks |
+| **Issue Workflow** | `active` → `acknowledged` → `validating` → `resolved` · escalation rules · lifecycle webhooks · 2-level CLUSTER→DETECTOR grouping |
 | **Auto-Remediation** | One-shot SSH fix · allowed_commands with `auto_execute` · AUTOFAIL issues · SSH jump host (ProxyJump) · Ansible runner |
 | **Plugin Hot-Reload** | `POST /api/plugins/reload` · SIGHUP full reload · Pattern Editor with regex tester + AI pattern suggestions |
 | **Telemetry** | Anomaly detection (3σ) · fixed thresholds · per-agent thresholds · InfluxDB export · heatmap · health score history |
@@ -363,6 +382,13 @@ telemetry_alerts:
 fim:
   enabled: true
   paths: [/etc/passwd, /etc/shadow, /etc/ssh/sshd_config]
+
+host_cluster_rules:
+  - pattern: node1
+    cluster: COMPUTE
+  - pattern: storage
+    cluster: STORAGE
+default_cluster: INFRA
 ```
 
 ---

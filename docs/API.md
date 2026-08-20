@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.08.003)
+# Sentinel API Reference (v2026.08.006)
 
 Complete API documentation for plugins, agents, and external integrations.
 
@@ -137,6 +137,8 @@ Response sets `Set-Cookie: session=...` (HMAC-signed; absolute session timeout 1
 | GET | `/api/v1/issues/<key>/history` | read | Timeline events |
 | GET | `/api/issues/<key>/markdown` | read | Issue rendered as Markdown |
 | POST | `/api/issues/<key>/postmortem` | read | AI-generated Markdown postmortem |
+| POST | `/api/issues/<key>/delete` | admin | Direct REST delete (used by modal buttons) |
+| POST | `/api/issues/<key>/ignore` | admin | Add to ignore list + delete from DB |
 | POST | `/api/v1/issues/batch_analyse` | admin | Batch AI analysis (up to 50) |
 | POST | `/api/analyze/auto_clusters` | read | Algorithmic clustering + optional AI root-cause naming |
 

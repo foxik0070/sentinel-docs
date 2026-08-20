@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.08.003)
+# Sentinel Commander — Dokumentace (v2026.08.006)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.003
+                    v2026.08.006
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,7 +43,26 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.08.003 systém obsahuje **1 087 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.08.006 systém obsahuje **1 087 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+
+---
+
+## Co je nového ve v2026.08.006 (2026-08-19)
+
+| Funkce | Detail |
+|---|---|
+| **Oprava watchdog ABRT pádu (kritické)** | Sentinel padal každých 5–38 min s `Failed with result 'watchdog'`. Příčina: neblokující socket pro systemd notify — při přetížení WebSocket vlákny kernel vracel `EAGAIN`, pings se ztrácely, systemd po 120 s poslal SIGABRT. Oprava: `sock.settimeout(1.0)` — send čeká max 1 s, pak obnoví socket |
+| **Konfigurovatelná cluster detekce** | `host_cluster_rules` v config.yaml — seznam pravidel `{pattern, cluster}` pro mapování hostname na clustery. Priorita: explicitní pole `cluster` → prefix `[CLUSTERNAME]` v `last_line` → konfigurační pravidla → `default_cluster`. Žádné hardkódované názvy clusterů |
+| **`api.get_cluster_from_host()`** | Sdílená funkce v `sentinel/api.py` — pluginy ji volají místo svých hardkódovaných `_cluster_from_host()` metod. `detector_icinga` a `detector_who` migrovány |
+| **`ignored_host_services`** | Nový parametr v konfiguraci `detector_icinga` — potlačuje specifické služby na specifických hostech (`service_pattern@host_pattern`). Eliminuje false positives pro služby, které na daném typu nodu neběží |
+| **Stale ROOT relace po restartu** | `detector_who`: po restartu byl `_scan_prev` prázdný → stale relace z DB se nikdy neuzavřely. Opraveno seedováním z `api.get_active_keys()` na začátku prvního scanu |
+| **Slurmctld debounce** | `detector_cluster`: `Slurmctld ping: DOWN` se hlásí až po `slurmctld_threshold` (výchozí 2) po sobě jdoucích DOWN skanech — transientní výpadky pingu nevytvářejí issues |
+| **Oprava tlačítek issues** | Tlačítka smazat/ignorovat v modal oknech nově volají přímé REST endpointy (`/api/issues/<key>/delete`, `/api/issues/<key>/ignore`) místo routování přes chat |
+| **2-úrovňové seskupení issues** | Incident Matrix a všechny modály seskupují issues do stromu CLUSTER → DETEKTOR. Cluster složky vždy otevřené, detektorové složky se sbalí při ≥5 issues |
+| **Zachování stavu složek** | Auto-refresh modalu (3 s) nově trackuje explicitně zavřené složky — zůstanou zavřené přes obnovení |
+| **Agent systemd unit names** | `agent_systemd_global_monitor`: flag `--plain` + parsování z pozice `[1]` — zobrazuje skutečná jména jednotek místo `●, ●, ●` |
+| **Nasazení chybějících pluginů** | Bylo nasazených jen 4/15 pluginů. `deploy-auto.sh` nově synchronizuje všechny `detector_*.py` a chrání je před smazáním |
+| **Odstraněny Teams test notifikace** | `__main__.py` už neposílá na neexistující kanál `tests` při startu/stopu |
 
 ---
 
@@ -207,7 +226,7 @@ Ve verzi v2026.08.003 systém obsahuje **1 087 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 087 automatizovaných testů** (v2026.08.003) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 087 automatizovaných testů** (v2026.08.006) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`
@@ -230,7 +249,7 @@ Ve verzi v2026.08.003 systém obsahuje **1 087 automatizovaných testů** a **80
 | **AI prognózy** | Kapacitní prognóza · týdenní výhled · těžba false-alarmů · vzorkování nezachycených logů (`foresight.py`, `alert_quality.py`, `unmatched.py`) |
 | **Znalostní báze** | Runbooky · prevention hinty · tréninkové páry · přenos KB mezi instancemi (`knowledge.py`) |
 | **Infra audit** | Config drift · zombie procesy · expirace certů · post-reboot checklist · blast-radius závislostí (`infra_audit.py`, `dependencies.py`) |
-| **Hybridní telemetrie** | Pull (inotify logy) + Push (agenti přes Bearer token) · více IP adres na agenta · tracking verze agenta (SHA) |
+| **Hybridní telemetrie** | Pull (inotify logy) + Push (agenti přes Bearer token) · více IP adres na agenta · tracking verze agenta (SHA) · version drift badge v detailu agenta |
 | **Autofix** | AI navrhne opravu → admin Schválit/Zamítnout → SSH exec na mgmt nodu · allowlist příkazů · autonomní exec |
 | **Prediktivní analytika** | TTC (Time-To-Critical) pro disky · Mann-Kendall trend test · předpověď lineární regresí · kapacitní plánování |
 | **Bezpečnostní profiler** | Brute-force, sudo abuse, CVE scan, neoprávněné porty, honeypot, FIM, expirace SSL |
@@ -238,7 +257,7 @@ Ve verzi v2026.08.003 systém obsahuje **1 087 automatizovaných testů** a **80
 | **Prometheus** | `GET /metrics` scrape + pushgateway export; auth přes scrape_token |
 | **Dashboard** | Stat karty · interaktivní min/max/avg grafy · trend chart · donut · health trend · flapping widget · live hodiny |
 | **Autentizace** | viewer / admin / superadmin · LDAP (lldap + OpenLDAP) · **2FA/TOTP** · **bcrypt** · rate-limit + IP ban · **CSRF** |
-| **Workflow issues** | `active` → `acknowledged` → `validating` → `resolved` · eskalační pravidla · lifecycle webhooky |
+| **Workflow issues** | `active` → `acknowledged` → `validating` → `resolved` · eskalační pravidla · lifecycle webhooky · 2-úrovňové seskupení CLUSTER→DETEKTOR |
 | **Auto-remediace** | Jednorázová SSH oprava · allowed_commands s `auto_execute` · AUTOFAIL issues · SSH jump host (ProxyJump) · Ansible runner |
 | **Plugin hot-reload** | `POST /api/plugins/reload` · SIGHUP plný reload · Pattern Editor s regex testerem + AI návrhy patternů |
 | **Telemetrie** | Detekce anomálií (3σ) · pevné thresholdy · per-agent thresholdy · InfluxDB export · heatmap · health score historie |
@@ -421,6 +440,13 @@ telemetry_alerts:
 fim:
   enabled: true
   paths: [/etc/passwd, /etc/shadow, /etc/ssh/sshd_config]
+
+host_cluster_rules:
+  - pattern: node1
+    cluster: COMPUTE
+  - pattern: storage
+    cluster: STORAGE
+default_cluster: INFRA
 ```
 
 ---

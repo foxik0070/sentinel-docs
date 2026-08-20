@@ -1,4 +1,4 @@
-# Sentinel Commander — Programátorská dokumentace (v2026.08.003)
+# Sentinel Commander — Programátorská dokumentace (v2026.08.006)
 
 Určeno pro vývojáře a DevOps inženýry píšící vlastní detekční pluginy, integrující Sentinel s externími nástroji nebo upravující jádro systému.
 
@@ -80,6 +80,7 @@ detectors:
 | `save_telemetry_snapshot(metric, value, host)` | Zapíše time-series bod (bufferovaný/dávkový zápis). |
 | `get_infrastructure_label(file_path)` | Extrahuje `SERVER: <hostname>` kontext z prefixu log řádky. |
 | `add_root_audit(server, ip)` | Idempotentní audit root relace s reverzním DNS. |
+| `get_cluster_from_host(hostname)` | Odvodí název clusteru z hostname dle `host_cluster_rules` v configu (v2026.08.006). Sdílená funkce pro všechny pluginy. |
 | `notify_teams(message, channel)` | Pošle Teams webhook zprávu přímo (mimo frontu). |
 
 ### Notifier (`notifier.py`)

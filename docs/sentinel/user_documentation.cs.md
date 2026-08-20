@@ -1,4 +1,4 @@
-# Sentinel Commander — Uživatelská příručka (v2026.08.003)
+# Sentinel Commander — Uživatelská příručka (v2026.08.006)
 
 Určeno pro operátory, administrátory a bezpečnostní techniky pracující se Sentinelem přes webové rozhraní nebo mobilní aplikaci.
 
@@ -53,7 +53,7 @@ Přihlašovací stránka odkazuje na veřejnou stránku **/status** (read-only p
 | Panel | Obsah |
 |---|---|
 | **System Monitor** | CPU/RAM/disk, AI latence, hloubka fronty, stav RAG, počet agentů |
-| **Aktivní incidenty** | Karty per kanál: security · infra · agents · root |
+| **Aktivní incidenty** | Karty seskupené do 2-úrovňového stromu: CLUSTER → DETEKTOR (per kanál: security · infra · agents · root) |
 | **AI Chat** | RAG dotazy, chat příkazy, chips s navrženými dotazy, LIVE kontext tag, drag&drop upload logu |
 | **Health trend** | 7denní line chart health score flotily + počet issues |
 | **Flapping widget** | Issues které se opakovaně vrací, seřazené dle frekvence |
@@ -173,6 +173,7 @@ Modal agenta agreguje vše o jednom nodu:
 | **Plánované akce** | Pending/plánované akce pro tento host |
 | **Okna údržby** | Per-host snooze okna s předvyplněným hostname |
 | **Heartbeat timeout** | Per-agent override (30–86400 s) nebo globální default |
+| **Stav verze** | Verze agenta (git SHA) porovnána s většinovou verzí mezi online agenty — zelený badge pokud aktuální, oranžový pokud zastaralý |
 | **Thresholdy** | Per-agent CPU/RAM/disk pravidla s quick-buttons (CPU > 90 %, RAM > 90 %, Disk > 85 %) — vynucováno serverem při každém ingestu |
 | **SSH klíče** | Záznamy known_hosts, rescan/delete |
 | **Deploy helper** | Generátor instalačního one-lineru |

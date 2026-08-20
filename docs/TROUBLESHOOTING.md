@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Troubleshooting Guide (v2026.08.003)
+# Sentinel Ecosystem — Troubleshooting Guide (v2026.08.006)
 
 Common issues and solutions across all Sentinel components.
 
@@ -140,6 +140,10 @@ proxy_read_timeout 86400;
 **Cause (pre-v2026.06.008):** the watchdog's HTTP self-check ran in the main loop and could be blocked by a slow DB operation.
 
 **Fix (v2026.06.008):** persistent socket + HTTP check moved to its own thread + SQLite `busy_timeout`. `faulthandler.enable()` now dumps all thread tracebacks to the journal on abort for diagnosis.
+
+**Second occurrence (pre-v2026.08.006):** socket was set as non-blocking (`setblocking(False)`). Under heavy WebSocket thread load, kernel returned `EAGAIN` → `BlockingIOError` silently swallowed → all sd_notify pings lost → systemd sent SIGABRT after 120 s. Crashes happened every 5–38 minutes.
+
+**Fix (v2026.08.006):** `sock.settimeout(1.0)` — send waits max 1 s, then recovers the socket. Pings are never silently dropped.
 
 ---
 

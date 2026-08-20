@@ -1,4 +1,4 @@
-# Sentinel Commander — User Guide (v2026.08.003)
+# Sentinel Commander — User Guide (v2026.08.006)
 
 Intended for operators, administrators, and security technicians interacting with Sentinel via the web interface or the mobile app.
 
@@ -53,7 +53,7 @@ The login page links to the public **/status** page (read-only fleet overview, a
 | Panel | Content |
 |---|---|
 | **System Monitor** | CPU/RAM/disk, AI latency, queue depth, RAG status, agent count |
-| **Active Incidents** | Cards per channel: security · infra · agents · root |
+| **Active Incidents** | Cards grouped into a 2-level tree: CLUSTER → DETECTOR (per channel: security · infra · agents · root) |
 | **AI Chat** | RAG queries, chat commands, suggested query chips, LIVE context tag, drag&drop log upload |
 | **Health trend** | 7-day line chart of fleet health score + issue count |
 | **Flapping widget** | Issues that keep re-appearing, sorted by frequency |
@@ -173,6 +173,7 @@ The agent modal aggregates everything about one node:
 | **Scheduled actions** | Pending/planned actions for this host |
 | **Maintenance windows** | Per-host snooze windows with pre-filled hostname |
 | **Heartbeat timeout** | Per-agent override (30–86400 s) or global default |
+| **Version status** | Agent version (git SHA) compared against the majority version across all online agents — green badge if current, orange if outdated |
 | **Thresholds** | Per-agent CPU/RAM/disk alert rules with quick-buttons (CPU > 90 %, RAM > 90 %, Disk > 85 %) — enforced server-side on every ingest |
 | **SSH keys** | known_hosts entries, rescan/delete |
 | **Deploy helper** | One-liner install command generator |

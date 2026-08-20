@@ -1,4 +1,4 @@
-# Sentinel Commander — Technical Documentation (v2026.08.003)
+# Sentinel Commander — Technical Documentation (v2026.08.006)
 
 Intended for system architects, L3 support, and infrastructure administrators. Covers internal mechanisms, daemon stability, memory management, and OS integration.
 
@@ -140,6 +140,8 @@ GET /api/health
 **SIGHUP** triggers the same full reload — config **plus** watcher patterns **plus** plugins (`DETECTORS`, `LOG_GROUPS`). The runtime log level can be changed without any reload via `/api/admin/log_level`.
 
 **Schema validation:** critical keys (`web.port`, `worker_threads`, `db_retention_days`, …) are validated with `jsonschema`; an invalid config is rejected instead of half-applied.
+
+**Cluster detection (v2026.08.006):** `host_cluster_rules` in config.yaml maps hostnames to clusters via substring patterns. `api.get_cluster_from_host()` is the shared lookup function used by all plugins (`detector_icinga`, `detector_who`, etc.). Priority: explicit `cluster` field in issue → `[CLUSTERNAME]` prefix in `last_line` → config rules → `default_cluster` (defaults to `INFRA`). Plugin-specific params: `detector_icinga` supports `ignored_host_services` (list of `service_pattern@host_pattern`) for false-positive suppression; `detector_cluster` supports `slurmctld_threshold` (consecutive DOWN pings before reporting).
 
 ---
 
