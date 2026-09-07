@@ -1,4 +1,4 @@
-# Sentinel Commander — Programmer Documentation (v2026.08.006)
+# Sentinel Commander — Programmer Documentation (v2026.09.011)
 
 Intended for developers and DevOps engineers writing custom detection plugins, integrating Sentinel with external tools, or modifying the system core.
 
@@ -79,7 +79,8 @@ detectors:
 | `enqueue_ai_task(prompt, channel)` | Push a task to the AI worker queue. Non-blocking. |
 | `save_telemetry_snapshot(metric, value, host)` | Write a time-series data point (buffered/batched). |
 | `get_infrastructure_label(file_path)` | Extract `SERVER: <hostname>` context from the log line prefix. |
-| `add_root_audit(server, ip)` | Idempotent root-session audit entry with reverse DNS. |
+| `add_root_audit(server, ip)` | Idempotent root-session audit entry with reverse DNS. An already-active session has its `last_seen` refreshed; records are marked `origin='detector'` (v2026.09.001). |
+| `close_root_audit(server, ip)` | Mark matching active records as disconnected. Detectors that do not call it are covered by the age sweep (`root_audit_stale_minutes`). |
 | `get_cluster_from_host(hostname)` | Derive cluster name from hostname using `host_cluster_rules` config (v2026.08.006). Shared by all plugins. |
 | `notify_teams(message, channel)` | Send a Teams webhook message directly (bypass queue). |
 
@@ -230,6 +231,20 @@ The payload is normalised and injected into the standard issue pipeline (same as
 **Outbound lifecycle webhooks:** configure URLs to be called on issue `CREATED` / `ACKNOWLEDGED` / `RESOLVED`; critical issues can additionally be synced to **Gitea** (`GITEA_URL/TOKEN/REPO`) and annotated in **Grafana** (`grafana_annotations.url/api_key`).
 
 ---
+
+## Functions Added in v2026.09.x
+
+| Function | Module | Purpose |
+|---|---|---|
+| `state_base._ensure_keeper()` | `state_base.py` | Opens and holds one long-lived DB connection. Without it every per-request `close()` is the last one and triggers a WAL checkpoint which, because `close()` does not release the GIL, freezes the whole process. Must issue a real query — `connect()` alone does not open the file. |
+| `watcher.fim_check()` | `watcher.py` | SHA-256 of watched files against a baseline in `kv_settings['fim_state']`. Returns changed paths and raises `FIM_CHANGE\|<path>` issues. The first run only records a baseline; an unreadable file never overwrites it. |
+| `state_agents.parse_root_sessions(msg)` | `state_agents.py` | Parse a root-monitor report into `{tty, ip, since}` entries. |
+| `state_agents.reconcile_root_sessions(conn, host, sessions, now)` | `state_agents.py` | Reconcile reported sessions against the DB on `(server, tty, login time)`. Returns `(new, kept, closed)`. |
+| `ChatService.build_alerts_context(limit=15)` | `chat_service.py` | Active-issue summary for AI context. Shared by the streaming and non-streaming chat paths — only one of them used to send it, so the UI answered from the knowledge base. |
+| `ChatService._loads_repaired(candidate)` | `chat_service.py` | Last-resort JSON parse when the model used an invalid escape (a shell regex such as `'a\|b'`). Doubles lone backslashes. |
+| `config.apply_extra_body(payload)` | `config.py` | Merge `ollama_extra_body` into an OpenAI `/v1` request body. Call only on /v1 branches. |
+
+> **Beware of `g` inside streaming generators.** An SSE generator is evaluated after the view returns, when Flask's request context is gone — `g.username` inside raises `RuntimeError`, the generator dies and the connection is cut mid-stream. Capture the value into a local before defining the generator. `TestSseGeneratorsAvoidRequestContext` enforces this.
 
 ## Database Schema — Key Tables
 

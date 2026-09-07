@@ -53,7 +53,7 @@ Klíčovým principem návrhu je **nulová inbound expozice**: agent nikdy neote
 | `agent_process_zombie_monitor` | `ps -eo state` (počet Z) | zombie procesy |
 | `agent_system_time_sync` | `timedatectl` NTP sync check | sync selže |
 | `agent_network_dns_monitor` | `socket.gethostbyname()` test | DNS překlad selže |
-| `agent_systemd_global_monitor` | `systemctl list-units --state=failed` | failed unit nalezen |
+| `agent_systemd_global_monitor` | `systemctl list-units --state=failed --plain` | nalezena failed unit — `--plain` a poziční parsování, jinak se odrážka četla jako název unit a issues ukazovaly `●, ●, ●` |
 | `agent_kernel_io_monitor` | `ps -eo state` (D stav ≥2) | I/O stall detekován |
 | `agent_netfilter_monitor` | `/proc/sys/net/netfilter` conntrack % | conntrack se plní |
 | `agent_disk_health_monitor` | `smartctl -H` na fyzických discích (PASSED/FAILED) | zdraví disku selže |
@@ -94,7 +94,9 @@ Content-Type: application/json
 
 {
   "hostname": "hpc-node-04",
-  "version": "<git-sha>",
+  "agent_version": "<git-sha>",
+  "os_name": "Rocky Linux 9.8 (Blue Onyx)",
+  "os_id": "rocky",
   "channel": "agents",
   "ip_addresses": ["10.0.0.4", "172.16.0.1"],
   "timestamp": "2026-06-02T18:42:00+02:00",
@@ -107,7 +109,9 @@ Content-Type: application/json
 }
 ```
 
-Server sleduje verzi agenta přes pole `version` (git SHA), zobrazeno v detail modalu agenta.
+Server sleduje verzi agenta přes `agent_version` (git SHA), u starších agentů spadne na `version` a `agent_sha`. Detail modal ji porovná s nejčastější verzí mezi online agenty a ukáže ✓ aktuální nebo ⬆ novější.
+
+`os_name` a `os_id` (z `/etc/os-release`) umožní AI vrstvě navrhovat příkazy a cesty odpovídající distribuci — bez nich autofix v heterogenní flotile míchal `apt` a `dnf`.
 
 ---
 

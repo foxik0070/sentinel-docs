@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.08.006)
+# Sentinel Commander — Dokumentace (v2026.09.011)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.006
+                    v2026.09.011
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,7 +43,30 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.08.006 systém obsahuje **1 087 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.09.011 systém obsahuje **1 165 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+
+---
+
+## Co je nového ve v2026.09.001 – v2026.09.011 (2026-09-08)
+
+| Vlastnost | Detail |
+|---|---|
+| **Zamrzání procesu při `close()` DB spojení (kritické)** | Instance s velkou databází padala několikrát denně a mezitím bylo UI nedostupné. `sqlite3.Connection.close()` **neuvolňuje GIL** a Sentinel nedržel žádné trvalé DB spojení — každé `close()` bylo *poslední* a SQLite pod ním provedl plný WAL checkpoint, po jehož dobu byl zmrazený celý proces. Oprava: `state_base._ensure_keeper()` otevře při startu jedno spojení a drží ho. Naměřeno na 111MB databázi: `close()` z 0,233 s na 0,000 s |
+| **Jedno zamrznutí, tři projevy** | Tentýž GIL vysvětlil všechno: web vlákno se nedostalo k `accept()` (accept fronta rostla ke 128, pak `Connection refused`), watchdog vlákno neodeslalo ping (SIGABRT po 300 s) a signal handler nedoběhl (SIGTERM ignorován 91 s → SIGKILL) |
+| **File Integrity Monitoring — doimplementován** | FIM měl config, dokumentaci i testy, ale **žádnou implementaci**; volal ho jen mrtvý `scheduler.py` smazaný ve v2026.08.003. `watcher.fim_check()` nyní počítá SHA-256 sledovaných souborů proti baseline v `kv_settings['fim_state']`, běží každou minutu z hlavní smyčky a zakládá issue `FIM_CHANGE\|<cesta>` v kanálu `security` se severity `high` |
+| **Root audit přestal vkládat znovu** | Agent cesta při **každém** hlášení zavřela a znovu vložila všechny aktivní relace — jeden stroj vyrobil 126 řádků za 36 minut a tabulka narostla na 105 000 řádků. Relace se nyní sesouhlasí podle `(server, tty, čas přihlášení)`: trvající se potvrdí, nová vloží, nehlášená uzavře. Přírůstek klesl na nulu |
+| **Délka relace konečně měří délku relace** | `connected_at` se resetoval při každém pollu, takže „délka" ukazovala dobu od posledního hlášení. Nyní drží **skutečný čas přihlášení** vyparsovaný z hlášení agenta |
+| **Zapomenuté root relace expirují** | Relace, které detektor přestal hlásit, zůstávaly `is_active=1` napořád — denní pruning maže jen `is_active=0`, takže je přeskočil (záznamy 67 dní staré se pořád tvářily jako aktivní). Nový `root_audit.last_seen` a minutový sweep řízený `root_audit_stale_minutes` (výchozí 30) |
+| **Rozlišení detektor vs. agent** | Obě cesty píšou do `root_audit`, ale do `server` ukládají něco jiného: detektor název clusteru, agent hostname. Nový sloupec `root_audit.origin` je odliší; u detektorových záznamů **je** cluster přímo hodnota `server`, což zároveň opravilo `CS` padající do `INFRA` (pravidlo `.cs.` na holé `CS` nesedělo) |
+| **Historie seskupená a limitovaná po clusterech** | Modal historie relací sdružuje záznamy do sbalitelných sekcí **cluster → server**. Globální `LIMIT 100` dával celé okno jedinému rušnému clusteru; nově je to posledních `root_audit_history_per_cluster` (výchozí 30) **na cluster**, aktivní relace se ukazují vždy |
+| **„Chyba komunikace" pod hotovou odpovědí** | Odpověď se vykreslila celá a hláška naskočila **pod ní**; nginx logoval `upstream prematurely closed connection` na `/api/chat/stream`. SSE generátor se vyhodnocuje **až po návratu view**, kdy Flask request kontext neexistuje — hned za událostí `done` ale volal `log_event(..., user=g.username)`, což vyhodí `RuntimeError`, generátor umře a spojení se utne uprostřed streamu. Jméno se nyní zachytí před definicí generátoru; stejná chyba byla ve streamu výpisu SSH příkazu v `actions.py`. Test prochází těla obou generátorů a hlídá, že na `g` nesahají |
+| **Chat odpovídal z KB místo z issues** | Streamovaná větev chatu — ta, kterou používá webové UI — skládala kontext jen z historie, knowledge base a otázky: **aktivní issues v něm nebyly vůbec**. Na dotaz o aktuálních problémech model odpověděl z jediného, co měl — z KB dokumentů o účtech a kvótách. Starší neproudová větev přehled alertů posílala, takže UI mělo *méně* kontextu než cesta, kterou nahradilo. `ChatService.build_alerts_context()` je nyní sdílená pro obě |
+| **Fronta požadavků ukazovala jinou frontu** | Modal vypisoval paměťový čítač jako „AI fronta", ale seznam bral z DB tabulky `task_queue` — dvě nesouvisející věci, takže hlásil „AI fronta: 1" nad „Fronta je prázdná", i když požadavek skutečně běžel. Nyní vypisuje reálně běžící AI požadavky, se stavem `waiting` (čeká na semafor) odlišeným od `processing` |
+| **Únik čítače AI fronty** | `chat_queue_depth` se zvyšoval před `llm_semaphore.acquire()` a snižoval až za ním — jakákoli výjimka mezi tím nechala čítač napořád nahoře. Tentýž `finally` uvolňoval semafor, který se možná nezamkl, čímž tiše rostl limit souběžnosti |
+| **`ollama_extra_body`** | Nová volba, která přimíchá extra pole do těla OpenAI `/v1` požadavku. Potřebná pro reasoning modely: `qwen3-32b` bez `chat_template_kwargs.enable_thinking=false` posílá `<think>` bloky **uvnitř `content`** (ne v `reasoning_content`), takže by skončily v chatu, v denním digestu i v auto-klasifikaci severity |
+| **Návrh autofixu jako syrový text** | Modely píšou do JSON stringů shellové regexy (`"grep -i 'a\|b'"`); `\|` není platná JSON escape sekvence, `json.loads` selhal a návrh se ukázal doslova s příkazem `N/A`. `extract_json()` to nyní zkusí znovu s osamocenými lomítky zdvojenými, platné escapy zůstávají |
+| **Vymyšlené stroje bez uvozujícího slova** | `ai_verify` označil halucinovaný stroj jen tam, kde ho model uvedl („na stroji web-server-03"). Holé „zkontroluj db-master-01" prošlo, protože každý token s pomlčkou a bez tečky se zahazoval jako příkaz. Takový token nyní projde, má-li **číselný segment**; `read-only`, `dry-run` a `self-signed` zůstávají odfiltrované. Hostname regex pracuje unicodově |
+| **Testy: 1 087 → 1 165** | Včetně 11 dlouhodobě padajících, které nikdy nebyly zelené: 9 FIM testů mířilo na funkci, která nikdy neexistovala, 2 testy `ai_verify` pokrývaly výše popsanou mezeru v detekci |
 
 ---
 
@@ -226,7 +249,7 @@ Ve verzi v2026.08.006 systém obsahuje **1 087 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 087 automatizovaných testů** (v2026.08.006) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 087 automatizovaných testů** (v2026.09.011) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`

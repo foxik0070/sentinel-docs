@@ -1,4 +1,4 @@
-# Sentinel Commander — Technická dokumentace (v2026.08.006)
+# Sentinel Commander — Technická dokumentace (v2026.09.011)
 
 Určeno pro systémové architekty, L3 support a infrastrukturní administrátory. Pokrývá interní mechanismy, stabilitu daemona, správu paměti a OS integraci.
 
@@ -168,7 +168,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 | `snooze_rules` | Okna údržby — globální nebo per host (sloupec `hosts` CSV) |
 | `custom_patterns` | Uživatelské regex patterny (Pattern Editor) |
 | `ssh_execute_log` | Audit log všech SSH příkazů |
-| `root_audit` | Log root relací — server, ip (s reverzním DNS), connected_at, is_active |
+| `root_audit` | Log root relací — `server`, `ip` (s reverzním DNS), `tty`, `connected_at`, `is_active`, `last_seen`, `origin`. `connected_at` drží **skutečný čas přihlášení** vyparsovaný z hlášení agenta, ne čas pollu, který ji zaznamenal |
 | `agent_thresholds` | Per-agent alert thresholdy (vynucované při ingestu) |
 | `comment_templates` | Uložené šablony komentářů k issue |
 
@@ -181,6 +181,31 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 **Agent watchdog:** background vlákno přepne `status` agenta na `OFFLINE`, pokud heartbeat nedorazí do `agent_heartbeat_timeout` sekund (per-agent nebo globální fallback); délka offline se při reconnectu zaznamená do telemetrie.
 
 ---
+
+## Životnost spojení — proč existuje keeper
+
+`sqlite3.Connection.close()` **neuvolňuje GIL** a zavření *posledního* spojení k WAL databázi spustí v SQLite plný checkpoint. Při vzorci spojení-na-požadavek bylo každé zavření to poslední, takže každý požadavek na dobu checkpointu zmrazil celý proces — na 111MB databázi dost dlouho na to, aby se web vlákno nedostalo k `accept()`, watchdog neodeslal ping a signal handler vůbec nedoběhl.
+
+`state_base._ensure_keeper()` proto otevře při startu jedno spojení a nezavře ho. Dvě věci jsou podstatné:
+
+- Samotný `sqlite3.connect()` se souboru nedotkne — SQLite ho otevírá až při prvním použití. Keeper proto provede skutečný dotaz (`SELECT 1 FROM sqlite_master LIMIT 1`), jinak nevznikne `-wal`/`-shm` a keeper nedrží nic. Regresní test ověřuje, že po `_ensure_keeper()` WAL session existuje.
+- Checkpointy dál probíhají přes `wal_autocheckpoint` uvnitř `execute()`, kde se GIL **uvolňuje**, takže WAL neroste donekonečna a nic přitom nezamrzá.
+
+Přítomnost `sentinel_state.db-wal` a `-shm` za běhu služby je rychlé ověření, že keeper dělá svou práci.
+
+## Sesouhlasení root relací
+
+Do `root_audit` píšou dva zapisovatelé a každý ukládá do `server` něco jiného: detektor název clusteru (`CLUSTER-A`), agent na stroji hostname (`hpc-node-04`). Sloupec `origin` (`detector` / `agent`) je odliší; u detektorových záznamů **je** cluster přímo hodnota `server`, takže se nic neodvozuje.
+
+Agent cesta dřív při **každém** hlášení zavřela všechny aktivní relace hostitele a vložila je znovu — jeden stroj vyrobil 126 řádků za 36 minut, tabulka narostla na 105 000 řádků a `connected_at` se resetoval při každém pollu, takže „délka relace" měřila dobu od posledního hlášení. Hlášení přitom nese plnou identitu:
+
+```
+🟢 [ACTIVE] pts/0 from 10.0.0.4 (since 2026-08-20 11:47)
+```
+
+Relace se proto sesouhlasí podle `(server, tty, čas přihlášení)`: trvající se potvrdí přes `last_seen`, nová vloží, nehlášená uzavře. Dvě souběžné relace z téže IP zůstávají oddělené — proto sloupec `tty` — a opětovné přihlášení na stejné pts je nová relace, protože má jiný čas přihlášení.
+
+Relace, které detektor prostě přestane hlásit, uzavře minutový sweep (`root_audit_stale_minutes`, výchozí 30). Je potřeba proto, že `add_root_audit()` je idempotentní: trvající relaci potvrdí mlčky, takže bez `last_seen` ji nejde odlišit od opuštěného záznamu — a denní pruning maže výhradně `is_active=0`, takže zapomenuté aktivní řádky přežívaly donekonečna (záznamy 67 dní staré se pořád zobrazovaly jako živé).
 
 ## Bezpečnostní vrstva
 
@@ -200,7 +225,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 | Validace vstupů | `int_param(value, default, min, max)` na 20+ endpointech — žádné záporné hodnoty do SQL `datetime()` |
 | Reverzní proxy | `get_real_ip()` respektuje `X-Forwarded-For` jen z `TRUSTED_PROXIES` |
 | Audit | `config_audit`, `ssh_execute_log`, `action_audit`, audit 403/401 přístupů; UI prohlížeč v Settings |
-| FIM | SHA-256 kritických souborů kontrolován každou minutu → security issue při změně |
+| FIM | SHA-256 kritických souborů kontrolován každou minutu → issue v kanálu `security` se severity `high` při změně. Implementováno ve v2026.09.004 — do té doby existoval config, ale kontrolu nikdo nevolal |
 | Symlink containment | Kontrola `os.path.realpath()` na všech file path vstupech |
 | Limity uploadů | Max 5 MB, `secure_filename()`, allowlist přípon |
 | CSP hlavičky | Content-Security-Policy na všech odpovědích |

@@ -1,4 +1,4 @@
-# Sentinel Commander — Technical Documentation (v2026.08.006)
+# Sentinel Commander — Technical Documentation (v2026.09.011)
 
 Intended for system architects, L3 support, and infrastructure administrators. Covers internal mechanisms, daemon stability, memory management, and OS integration.
 
@@ -168,7 +168,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 | `snooze_rules` | Maintenance windows — global or per-host (`hosts` CSV column) |
 | `custom_patterns` | User-defined regex detection patterns (Pattern Editor) |
 | `ssh_execute_log` | Audit log of all SSH-executed commands |
-| `root_audit` | Root session log — server, ip (with reverse DNS), connected_at, is_active |
+| `root_audit` | Root session log — `server`, `ip` (with reverse DNS), `tty`, `connected_at`, `is_active`, `last_seen`, `origin`. `connected_at` holds the **actual login time** parsed from the agent's report, not the time of the poll that observed it |
 | `agent_thresholds` | Per-agent alert thresholds (enforced on ingest) |
 | `comment_templates` | Saved comment templates for issue annotations |
 
@@ -181,6 +181,31 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 **Agent watchdog**: background thread flips agent `status` to `OFFLINE` if no heartbeat within `agent_heartbeat_timeout` seconds (per-agent or global fallback); offline duration is recorded to telemetry on reconnect.
 
 ---
+
+## Connection Lifetime — Why the Keeper Exists
+
+`sqlite3.Connection.close()` does **not release the GIL**, and closing the *last* connection to a WAL database makes SQLite run a full checkpoint. With a connection-per-request pattern every close was the last one, so each request froze the whole process for the duration of a checkpoint — long enough on a 111 MB database to starve the web thread out of `accept()`, the systemd watchdog out of its ping, and the signal handler out of running at all.
+
+`state_base._ensure_keeper()` therefore opens one connection at startup and never closes it. Two details matter:
+
+- `sqlite3.connect()` alone does not touch the file — SQLite opens it lazily on first use. The keeper issues a real query (`SELECT 1 FROM sqlite_master LIMIT 1`), otherwise no `-wal`/`-shm` appears and the keeper holds nothing. A regression test asserts the WAL session exists after `_ensure_keeper()`.
+- Checkpointing still happens through `wal_autocheckpoint` inside `execute()`, which **does** release the GIL, so the WAL stays bounded without freezing anything.
+
+Presence of `sentinel_state.db-wal` and `-shm` while the service runs is the quick way to confirm the keeper is doing its job.
+
+## Root Session Reconciliation
+
+Two writers feed `root_audit` and they store different things in `server`: a detector writes the cluster name (`CLUSTER-A`), an on-host agent writes the hostname (`hpc-node-04`). The `origin` column (`detector` / `agent`) distinguishes them; for detector records the cluster **is** the `server` value, so no pattern matching is involved.
+
+The agent path used to close every active session for a host and re-insert them on **every** report — one host produced 126 rows in 36 minutes and the table reached 105 000 rows, which also meant `connected_at` was reset each poll and "session duration" measured time since the last report. Reports carry full identity:
+
+```
+🟢 [ACTIVE] pts/0 from 10.0.0.4 (since 2026-08-20 11:47)
+```
+
+so sessions are now reconciled on `(server, tty, login time)`: an ongoing session is confirmed via `last_seen`, a new one inserted, an unreported one closed. Two concurrent sessions from the same IP stay separate — hence the `tty` column — and re-login on the same pts is a new session because the login time differs.
+
+Sessions a detector simply stops reporting are closed by a per-minute sweep (`root_audit_stale_minutes`, default 30). This is needed because `add_root_audit()` is idempotent: an ongoing session is confirmed silently, so without `last_seen` there is no way to tell it from an abandoned record — and the daily pruning only deletes `is_active=0`, so stale active rows survived indefinitely (records 67 days old were still displayed as live).
 
 ## Security Layer
 
@@ -200,7 +225,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 | Input validation | `int_param(value, default, min, max)` on 20+ endpoints — no negative values reaching SQL `datetime()` |
 | Reverse proxy | `get_real_ip()` honours `X-Forwarded-For` only from `TRUSTED_PROXIES` |
 | Audit | `config_audit`, `ssh_execute_log`, `action_audit`, 403/401 access audit; viewer UI in Settings |
-| FIM | SHA-256 of critical files checked every minute → security issue on change |
+| FIM | SHA-256 of critical files checked every minute → `security` issue with severity `high` on change. Implemented in v2026.09.004 — before that the config existed but nothing called the check |
 | Symlink containment | `os.path.realpath()` check on all file path inputs |
 | Upload limits | 5 MB max, `secure_filename()`, extension allowlist |
 | CSP headers | Content-Security-Policy on all responses |

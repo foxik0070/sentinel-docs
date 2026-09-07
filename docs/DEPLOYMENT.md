@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Deployment Guide (v2026.08.006)
+# Sentinel Ecosystem — Deployment Guide (v2026.09.011)
 
 Complete guide for deploying the entire Sentinel monitoring ecosystem in production.
 
@@ -92,7 +92,37 @@ telemetry_alerts:
 fim:
   enabled: true
   paths: [/etc/passwd, /etc/shadow, /etc/ssh/sshd_config]
+
+# Root session audit (v2026.09.001+)
+root_audit_stale_minutes: 30        # close sessions a detector stopped reporting
+root_audit_history_per_cluster: 30  # history shown per cluster, not globally
 ```
+
+> **FIM only started working in v2026.09.004.** The `fim:` block above existed and was documented earlier, but nothing ever called the check — its only caller was a dead module removed in v2026.08.003. If you configured FIM before that release, it was silently doing nothing; the first run after upgrading records a baseline without alerting, so expect no findings until something actually changes.
+
+### Reasoning models (`ollama_extra_body`)
+
+Models that emit chain-of-thought need it switched off, otherwise the reasoning ends up in chat answers, in the daily digest and in auto-severity classification. `qwen3-32b` writes `<think>` blocks **inside `content`** rather than into `reasoning_content`, where Sentinel could separate them:
+
+```yaml
+ollama_model: qwen3-32b
+ollama_extra_body:
+  chat_template_kwargs:
+    enable_thinking: false
+```
+
+The fields are merged into the OpenAI `/v1` request body only. Hailo and the legacy `/api/generate` branch do not understand them and would reject the request.
+
+Measured against a LiteLLM proxy, median of four runs, severity classification:
+
+| model | total | first token | throughput |
+|---|---|---|---|
+| `qwen2.5_coder:32b` | 2.77 s | 0.05 s | 70 chars/s |
+| `qwen3-32b` + `enable_thinking=false` | **1.61 s** | 0.06 s | **82 chars/s** |
+
+With thinking left on, the same query takes 8.4 s and produces 1 346 characters, most of it reasoning.
+
+> **Embeddings follow `ollama_url`.** RAG derives the embedding endpoint from it unless `embedding_ollama_url` is set. If you point `ollama_url` at a server that only serves a chat model, embeddings break and RAG silently stops returning context.
 
 The setup wizard (`sentinel_init.py`) refuses default passwords, creates `/var/lib/sentinel`, and generates the systemd unit with `WatchdogSec=900` plus a WAL-checkpoint `ExecStartPre`. Config files are validated with `jsonschema` — invalid critical keys are rejected at load.
 

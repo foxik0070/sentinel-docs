@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Troubleshooting Guide (v2026.08.006)
+# Sentinel Ecosystem — Troubleshooting Guide (v2026.09.011)
 
 Common issues and solutions across all Sentinel components.
 
@@ -144,6 +144,75 @@ proxy_read_timeout 86400;
 **Second occurrence (pre-v2026.08.006):** socket was set as non-blocking (`setblocking(False)`). Under heavy WebSocket thread load, kernel returned `EAGAIN` → `BlockingIOError` silently swallowed → all sd_notify pings lost → systemd sent SIGABRT after 120 s. Crashes happened every 5–38 minutes.
 
 **Fix (v2026.08.006):** `sock.settimeout(1.0)` — send waits max 1 s, then recovers the socket. Pings are never silently dropped.
+
+**Third occurrence — the actual root cause (pre-v2026.09.001):** the two fixes above were real but treated symptoms. Crashes continued on the instance with a large database, and between them the UI was unreachable.
+
+`sqlite3.Connection.close()` does **not release the GIL**. Sentinel held no long-lived DB connection — it opened and closed one per request — so every `close()` was the *last* connection to the database and SQLite ran a full WAL checkpoint under it. For the duration of that checkpoint **the entire process is frozen**.
+
+Measured on the production database (111 MB) with a thread ticking every 1 ms:
+
+```
+INSERT waiting 6.5 s on a lock   ticks=5992 / expected 6536  -> GIL released
+close()                          ticks=   1 / expected  233  -> GIL held
+```
+
+One freeze explained three different symptoms, which is why it was mistaken for three bugs:
+
+| Symptom | What was happening |
+|---|---|
+| UI unreachable | the web thread never got the GIL, so it never reached `accept()` — the accept queue grew toward its 128 backlog, then connections were refused |
+| SIGABRT | the watchdog thread never got the GIL either, so no ping was sent; systemd killed the process after 300 s |
+| SIGKILL | Python signal handlers need the GIL to run, so SIGTERM was ignored for 91 s until `stop-sigterm timed out` |
+
+**Fix (v2026.09.001):** `state_base._ensure_keeper()` opens one connection at startup and holds it for the life of the process. No per-request `close()` is then the last one, so checkpointing stays inside `execute()`, where the GIL *is* released.
+
+```
+without keeper   WAL 52.5 MB | close 0.233 s  -> process frozen
+with keeper      WAL 52.5 MB | close 0.000 s  -> no freeze
+```
+
+The WAL does not grow without bound — `wal_autocheckpoint` still runs; after 120 000 rows it stayed at 8.8 MB.
+
+**How to check whether your instance is affected:** if `sentinel_state.db-wal` and `-shm` do **not** exist while the service is running, no connection is being held and every `close()` is checkpointing.
+
+```bash
+ls /var/lib/sentinel/sentinel_state.db*     # -wal and -shm must be present
+ss -ltn | grep :5050                        # Recv-Q is the accept backlog; should stay 0
+```
+
+---
+
+### "Communication error" appears below a completed answer
+
+**Symptom:** the chat answer renders in full, and a `⚠️ Communication error or timeout` bubble appears **underneath** it. Intermittent. nginx logs:
+
+```
+upstream prematurely closed connection while reading upstream,
+request: "POST /api/chat/stream"
+```
+
+**Cause (pre-v2026.09.010):** an SSE generator is evaluated **after the view returns**, when Flask's request context no longer exists. Immediately after emitting the `done` event the generator called:
+
+```python
+service.log_event("rag_chat_stream", "Streaming response sent",
+                  user=g.username, duration_ms=duration * 1000)
+```
+
+`g.username` raises `RuntimeError: working outside of request context`, the generator dies and the server cuts the connection mid-stream. The browser sees a read error — but it has already rendered the tokens, so the message lands after the answer.
+
+**Fix (v2026.09.010):** the value is captured into `_stream_user` **before** the generator is defined. The same mistake was present in the SSH command output stream in `actions.py`. A test walks both generator bodies and fails if they reference `g`.
+
+**Rule of thumb:** anything a streaming generator needs from `g`, `request` or `session` must be read into a local variable before the generator is defined.
+
+---
+
+### Chat answers from the knowledge base instead of from current issues
+
+**Symptom:** asked to analyse active problems, the assistant replies about topics from KB documents (user accounts, storage quotas) rather than the alerts that are actually firing.
+
+**Cause (pre-v2026.09.011):** the streaming chat path — the one the web UI uses — assembled its context from conversation history, knowledge base and the question only. Active issues were not included at all, so the model answered from the only material it had. The older non-streaming path *did* send an alert summary, so the UI had less context than the code path it replaced.
+
+**Fix (v2026.09.011):** `ChatService.build_alerts_context()` is shared by both paths — 15 most recent issues with host, channel and severity, plus the total count. An empty state is stated explicitly, otherwise the model infers problems from the KB.
 
 ---
 

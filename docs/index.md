@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.08.006)
+# Sentinel Commander — Documentation (v2026.09.011)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.08.006
+                    v2026.09.011
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,7 +43,32 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.08.006 the system has accumulated **1 087 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.09.011 the system has accumulated **1 165 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+
+---
+
+## What's New in v2026.09.001 – v2026.09.011 (2026-09-08)
+
+| Feature | Detail |
+|---|---|
+| **Process freeze on DB `close()` (critical)** | An instance with a large database died several times a day and its UI was unreachable in between. `sqlite3.Connection.close()` does **not** release the GIL, and Sentinel held no long-lived DB connection — so every per-request `close()` was the *last* connection and SQLite ran a full WAL checkpoint under it, freezing the whole process. Fix: `state_base._ensure_keeper()` opens one connection at startup and keeps it open. Measured on a 111 MB database: `close()` went from 0.233 s to 0.000 s |
+| **One freeze, three symptoms** | The same GIL hold explained all of it: the web thread never reached `accept()` (accept queue grew toward 128, then `Connection refused`), the watchdog thread never sent a ping (SIGABRT after 300 s), and the signal handler never ran (SIGTERM ignored for 91 s → SIGKILL) |
+| **File Integrity Monitoring — implemented** | FIM had config, documentation and tests but **no implementation**; its only caller was the dead `scheduler.py` removed in v2026.08.003. `watcher.fim_check()` now hashes watched files (SHA-256) against a baseline in `kv_settings['fim_state']`, runs every minute from the main loop, and raises `FIM_CHANGE\|<path>` issues in the `security` channel with severity `high` |
+| **Root audit stops re-inserting** | The agent path closed and re-inserted every active session on **every** report — one host produced 126 rows in 36 minutes and the table reached 105 000 rows. Sessions are now reconciled by `(server, tty, login time)`: an ongoing session is confirmed, a new one inserted, an unreported one closed. Row growth dropped to zero |
+| **Session length finally means session length** | `connected_at` used to be reset on every poll, so "duration" showed time since the last report. It now holds the **actual login time** parsed from the agent's message |
+| **Stale root sessions expire** | Sessions a detector stops reporting stayed `is_active=1` forever — daily pruning only deletes `is_active=0`, so it skipped them (records 67 days old were still shown as active). New `root_audit.last_seen` plus a per-minute sweep controlled by `root_audit_stale_minutes` (default 30) |
+| **Detector vs. agent origin** | Both paths write to `root_audit` but store different things in `server`: a detector writes the cluster name, an agent the hostname. New `root_audit.origin` column tells them apart; for detector records the cluster **is** the `server` value, which also fixed `CS` falling into `INFRA` (the `.cs.` rule never matched the bare `CS`) |
+| **History grouped and limited per cluster** | The session history modal groups records into collapsible **cluster → server** sections. The global `LIMIT 100` gave the whole window to one busy cluster; it is now the last `root_audit_history_per_cluster` (default 30) **per cluster**, with active sessions always shown |
+| **`ollama_extra_body`** | New config key that merges extra fields into the OpenAI `/v1` request body. Needed for reasoning models: `qwen3-32b` without `chat_template_kwargs.enable_thinking=false` emits `<think>` blocks **inside `content`** (not `reasoning_content`), which would land in chat, in the daily digest and in auto-severity classification |
+| **Invented hosts detected without a lead-in word** | `ai_verify` only flagged a hallucinated machine when the model introduced it ("on machine web-server-03"). A bare "check db-master-01" passed, because any hyphenated token without a dot was discarded as a command. Such a token now passes when it has a **numeric segment**; `read-only`, `dry-run` and `self-signed` stay filtered. The hostname regex is Unicode-aware |
+| **Plugin log modal** | New `/api/plugins/<name>/log` endpoint and a **Log** button in the Detectors & Plugins table |
+| **Agent version badge** | The agent detail modal compares an agent's version against the most common version among online agents and shows ✓ current or ⬆ newer |
+| **"Communication error" under a finished answer** | The answer rendered in full and the error appeared **below** it; nginx logged `upstream prematurely closed connection` on `/api/chat/stream`. An SSE generator is evaluated **after the view returns**, when Flask's request context is gone — but right after emitting `done` it called `log_event(..., user=g.username)`, which raises `RuntimeError`, kills the generator and cuts the connection mid-stream. The username is now captured before the generator is defined; the same bug was in the SSH-output stream in `actions.py`. A test walks both generator bodies and fails if they touch `g` |
+| **Chat answered from the KB instead of from issues** | The streaming chat path — the one the web UI uses — assembled context from conversation history, knowledge base and the question only: **active issues were not in it at all**. Asked to analyse current problems, the model answered from the only thing it had, KB documents about user accounts and storage quotas. The older non-streaming path did send an alert summary, so the UI had *less* context than the path it replaced. `ChatService.build_alerts_context()` is now shared by both |
+| **Request queue showed a different queue** | The modal printed the in-memory counter as "AI queue" but listed rows from the DB `task_queue` — two unrelated things, so it reported "AI queue: 1" above "Queue is empty" while a request really was running. It now lists the actual in-flight AI requests, with `waiting` (queued on the semaphore) distinguished from `processing` |
+| **AI queue counter leaked** | `chat_queue_depth` was incremented before `llm_semaphore.acquire()` and decremented after it — any exception in between left the counter up forever. The same `finally` released a semaphore that may never have been acquired, silently raising the concurrency limit |
+| **Autofix suggestion shown as raw text** | Models write shell regexes into JSON strings (`"grep -i 'a\|b'"`); `\|` is not a valid JSON escape, so `json.loads` failed and the suggestion appeared verbatim with command `N/A`. `extract_json()` now retries with lone backslashes doubled, leaving valid escapes intact |
+| **Tests: 1 087 → 1 165** | Includes 11 long-failing tests that were never green: 9 FIM tests targeted a function that had never existed, 2 `ai_verify` tests covered the detection gap above |
 
 ---
 
@@ -170,7 +195,7 @@ As of v2026.08.006 the system has accumulated **1 087 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 087 automated tests** (v2026.08.006) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 165 automated tests** (v2026.09.011) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 

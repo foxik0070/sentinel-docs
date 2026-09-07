@@ -53,7 +53,7 @@ The key design principle is **zero inbound exposure**: the agent never opens a l
 | `agent_process_zombie_monitor` | `ps -eo state` (Z count) | zombies appear |
 | `agent_system_time_sync` | `timedatectl` NTP sync check | sync fails |
 | `agent_network_dns_monitor` | `socket.gethostbyname()` test | DNS resolution fails |
-| `agent_systemd_global_monitor` | `systemctl list-units --state=failed` | failed unit found |
+| `agent_systemd_global_monitor` | `systemctl list-units --state=failed --plain` | failed unit found — `--plain` plus positional parsing, otherwise the bullet glyph was read as the unit name and issues showed `●, ●, ●` |
 | `agent_kernel_io_monitor` | `ps -eo state` (D state ≥2) | I/O stall detected |
 | `agent_netfilter_monitor` | `/proc/sys/net/netfilter` conntrack % | conntrack fills up |
 | `agent_disk_health_monitor` | `smartctl -H` on physical disks (PASSED/FAILED) | disk health fails |
@@ -94,8 +94,10 @@ Content-Type: application/json
 
 {
   "hostname": "hpc-node-04",
-  "version": "<git-sha>",
+  "agent_version": "<git-sha>",
   "channel": "agents",
+  "os_name": "Rocky Linux 9.8 (Blue Onyx)",
+  "os_id": "rocky",
   "ip_addresses": ["10.0.0.4", "172.16.0.1"],
   "timestamp": "2026-06-02T18:42:00+02:00",
   "data": {
@@ -107,7 +109,9 @@ Content-Type: application/json
 }
 ```
 
-The server tracks the agent version via the `version` field (git SHA), displayed in the agent detail modal.
+The server tracks the agent version via `agent_version` (git SHA), falling back to `version` and `agent_sha` for older agents. The detail modal compares it against the most common version among online agents and shows ✓ current or ⬆ newer.
+
+`os_name` and `os_id` (from `/etc/os-release`) let the AI layer suggest distribution-appropriate commands and paths — without them autofix proposals mixed `apt` and `dnf` across a heterogeneous fleet.
 
 ---
 

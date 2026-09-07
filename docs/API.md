@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.08.006)
+# Sentinel API Reference (v2026.09.011)
 
 Complete API documentation for plugins, agents, and external integrations.
 
@@ -89,7 +89,11 @@ Extract the `SERVER: <hostname>` context injected by Overhealth, or derive from 
 
 ### `add_root_audit(server, ip)`
 
-Idempotent root-session audit entry (one active record per server+ip) with reverse DNS lookup.
+Idempotent root-session audit entry (one active record per server+ip) with reverse DNS lookup. Since v2026.09.001 an already-active session has its `last_seen` refreshed instead of being silently ignored — without that timestamp the stale sweep cannot tell an ongoing session from an abandoned record, and rows stayed `is_active=1` forever (the daily pruning only deletes `is_active=0`). Records written through this path are marked `origin='detector'`.
+
+### `close_root_audit(server, ip)`
+
+Marks matching active records as disconnected. Detectors that track sessions themselves should call it; those that do not are covered by the age-based sweep (`root_audit_stale_minutes`, default 30).
 
 ### `notifier.send_notification(title, message, severity, channel)`
 
@@ -225,6 +229,9 @@ The optional `metrics` object is evaluated against `agent_thresholds` rules — 
 | GET | `/status` | — | Public status dashboard (HTML): CPU/RAM/Disk telemetry, anonymized recent incidents, online/offline agent table, infra/agent/security category breakdown |
 | GET | `/api/status` | read | Detailed system status (DB size, queue depth, AI latency) |
 | POST | `/api/plugins/reload` | admin | Hot-reload all plugins |
+| GET | `/api/plugins/<name>/log` | read | Recent issue records produced by one detector (`limit`, max 500). Backs the **Log** button in the Detectors & Plugins table |
+| GET | `/api/root_audit` | read | Root session history. Returns `cluster`, `tty` and `origin` (`detector`/`agent`) per record. Limited to the last `root_audit_history_per_cluster` (default 30) **per cluster** rather than globally — a single busy cluster used to consume the whole window. Active sessions are always included |
+| GET | `/api/queue/details` | read | Request queue. `requests` lists the AI requests actually in flight (`status`: `waiting` on the semaphore, `processing` running) followed by DB `task_queue` rows. In-flight entries carry `cancellable: false` — they are HTTP threads, not queue rows |
 | GET | `/api/patterns` | read | List custom detection patterns |
 | POST | `/api/patterns` | admin | Add pattern |
 | POST | `/api/patterns/suggest` | admin | AI regex suggestions from historical issues |

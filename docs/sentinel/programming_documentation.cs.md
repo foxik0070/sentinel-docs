@@ -1,4 +1,4 @@
-# Sentinel Commander — Programátorská dokumentace (v2026.08.006)
+# Sentinel Commander — Programátorská dokumentace (v2026.09.011)
 
 Určeno pro vývojáře a DevOps inženýry píšící vlastní detekční pluginy, integrující Sentinel s externími nástroji nebo upravující jádro systému.
 
@@ -80,6 +80,7 @@ detectors:
 | `save_telemetry_snapshot(metric, value, host)` | Zapíše time-series bod (bufferovaný/dávkový zápis). |
 | `get_infrastructure_label(file_path)` | Extrahuje `SERVER: <hostname>` kontext z prefixu log řádky. |
 | `add_root_audit(server, ip)` | Idempotentní audit root relace s reverzním DNS. |
+| `close_root_audit(server, ip)` | Označí odpovídající aktivní záznamy jako odpojené. Detektory, které ji nevolají, pokryje věkový sweep (`root_audit_stale_minutes`). |
 | `get_cluster_from_host(hostname)` | Odvodí název clusteru z hostname dle `host_cluster_rules` v configu (v2026.08.006). Sdílená funkce pro všechny pluginy. |
 | `notify_teams(message, channel)` | Pošle Teams webhook zprávu přímo (mimo frontu). |
 
@@ -230,6 +231,20 @@ Payload je normalizován a vložen do standardní issue pipeline (stejně jako v
 **Odchozí lifecycle webhooky:** nakonfigurujte URL volané při `CREATED` / `ACKNOWLEDGED` / `RESOLVED`; kritické issues lze navíc synchronizovat do **Gitea** (`GITEA_URL/TOKEN/REPO`) a anotovat v **Grafaně** (`grafana_annotations.url/api_key`).
 
 ---
+
+## Funkce přidané ve v2026.09.x
+
+| Funkce | Modul | Účel |
+|---|---|---|
+| `state_base._ensure_keeper()` | `state_base.py` | Otevře a drží jedno trvalé DB spojení. Bez něj je každé per-request `close()` to poslední a spustí WAL checkpoint, který kvůli nedrženému GIL zmrazí celý proces. Musí provést skutečný dotaz — samotný `connect()` soubor neotevře. |
+| `watcher.fim_check()` | `watcher.py` | SHA-256 sledovaných souborů proti baseline v `kv_settings['fim_state']`. Vrací seznam změněných cest, zakládá issue `FIM_CHANGE\|<cesta>`. První běh baseline jen založí; nečitelný soubor ji nepřepíše. |
+| `state_agents.parse_root_sessions(msg)` | `state_agents.py` | Rozparsuje hlášení root monitoru na `{tty, ip, since}`. |
+| `state_agents.reconcile_root_sessions(conn, host, sessions, now)` | `state_agents.py` | Sesouhlasí hlášené relace se stavem v DB podle `(server, tty, čas přihlášení)`. Vrací `(nové, potvrzené, uzavřené)`. |
+| `ChatService.build_alerts_context(limit=15)` | `chat_service.py` | Přehled aktivních issues pro AI kontext. Sdílená pro streamovanou i neproudovou větev chatu — dřív ji posílala jen jedna, takže UI odpovídalo z knowledge base. |
+| `ChatService._loads_repaired(candidate)` | `chat_service.py` | Poslední pokus o JSON, kde model použil neplatnou escape sekvenci (shellový regex `'a\|b'`). Zdvojí osamocená lomítka. |
+| `config.apply_extra_body(payload)` | `config.py` | Přimíchá `ollama_extra_body` do těla OpenAI `/v1` požadavku. Volat jen na /v1 větvích. |
+
+> **Pozor na `g` ve streamovacích generátorech.** SSE generátor se vyhodnocuje až po návratu view, kdy Flask request kontext neexistuje — `g.username` uvnitř vyhodí `RuntimeError`, generátor umře a spojení se utne uprostřed streamu. Hodnotu zachyťte do lokální proměnné **před** definicí generátoru. Test `TestSseGeneratorsAvoidRequestContext` to hlídá.
 
 ## Schéma databáze — klíčové tabulky
 
