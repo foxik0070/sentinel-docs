@@ -1,4 +1,4 @@
-# Sentinel Commander — Technická dokumentace (v2026.09.011)
+# Sentinel Commander — Technická dokumentace (v2026.09.016)
 
 Určeno pro systémové architekty, L3 support a infrastrukturní administrátory. Pokrývá interní mechanismy, stabilitu daemona, správu paměti a OS integraci.
 
@@ -157,6 +157,7 @@ Veškerý stav je v `/var/log/sentinel/logs/sentinel_state.db` ve WAL (Write-Ahe
 | `action_audit` | Append-only compliance log — každý lifecycle event s aktérem a časem |
 | `config_audit` | Audit změn configu — kdo, kdy, IP, jaké klíče |
 | `task_queue` | Fronta AI workerů — status, worker_id (single-consumer garance) |
+| `user_audit` | Každé přihlášení, lokální i LDAP — `auth_source`, `first_seen`, `last_login`, `last_ip`, `login_count`, `online_seconds`. Odlišné od `user_roles`, která drží jen ty, komu někdo roli změnil |
 | `telemetry` | TSDB — metric, value, timestamp (kompozitní indexy, dávkové zápisy) |
 | `agents` | Registr agentů — hostname, token, last_seen, status, ip_addresses, version |
 | `active_sessions` | Tracking sessions — user, ip, created_at, last_seen, revokovatelné |
@@ -206,6 +207,20 @@ Agent cesta dřív při **každém** hlášení zavřela všechny aktivní relac
 Relace se proto sesouhlasí podle `(server, tty, čas přihlášení)`: trvající se potvrdí přes `last_seen`, nová vloží, nehlášená uzavře. Dvě souběžné relace z téže IP zůstávají oddělené — proto sloupec `tty` — a opětovné přihlášení na stejné pts je nová relace, protože má jiný čas přihlášení.
 
 Relace, které detektor prostě přestane hlásit, uzavře minutový sweep (`root_audit_stale_minutes`, výchozí 30). Je potřeba proto, že `add_root_audit()` je idempotentní: trvající relaci potvrdí mlčky, takže bez `last_seen` ji nejde odlišit od opuštěného záznamu — a denní pruning maže výhradně `is_active=0`, takže zapomenuté aktivní řádky přežívaly donekonečna (záznamy 67 dní staré se pořád zobrazovaly jako živé).
+
+## Self-check detektorů
+
+`load_plugins()` porovná zapnuté detektory z `config.yaml` proti skutečně načteným a rozdíl zapíše jako `SENTINEL|detectors_missing` (kanál `infra`, severity `critical`); po jejich načtení se issue uklidí sama.
+
+Existuje to proto, že tahle porucha je ze své podstaty tichá. Běžící proces si naimportované moduly drží v paměti, takže detektory, kterým někdo smazal zdrojové soubory, fungují dál až do dalšího restartu. Po něm už jejich logy nikdo nečte, stale cleanup do hodiny uklidí jejich issues a instance vypadá zdravě, přestože neprodukuje nic. Kontrola z dvou dnů falešného klidu udělá jedno issue.
+
+Self-check nemůže shodit start — je obalený — ale případné selhání se loguje, ne spolkne.
+
+## Audit přihlášení
+
+`user_audit` se plní z `_complete_login()`, tedy z jediného místa, kudy projde každé přihlášení, takže záznam dostane i uživatel z LDAPu, kterému nikdo nenastavil roli. Samotná `user_roles` na to nestačí: obsahuje jen ty, komu někdo roli změnil.
+
+Nasčítaný čas online se počítá v `session_remove()` **ještě před smazáním řádku** — délka relace je uložená v `created_at`/`last_seen` tabulky `active_sessions` a zmizela by s ním. Nesmyslné hodnoty (záporné, delší než týden) se zahazují, aby jedna rozbitá relace nerozhodila součet.
 
 ## Bezpečnostní vrstva
 

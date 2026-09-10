@@ -22,6 +22,21 @@ The `sentinel-plugins` repository ships **11 detectors**, each reading log strea
 
 ---
 
+## Detectors in a Separate Repository
+
+Not every detector ships with Sentinel. Site-specific ones — HPC clusters, ECC counters, cooling — are commonly kept in their own repository and deployed into `PLUGIN_DIR` alongside the built-in plugins.
+
+That arrangement has two traps, both of which have bitten in production:
+
+- **No deploy of the `Sentinel` package will place them.** They need their own deploy step; without it the files can simply be absent while `config.yaml` still lists them.
+- **Never `rsync --delete` into the plugin directory.** The separate repository does not contain the plugins that ship with Sentinel, so `--delete` removes them.
+
+A third hazard is timing rather than tooling: a running process keeps imported modules in memory, so detectors whose source files are deleted **keep working until the next restart**. The gap between the deletion and the restart that exposes it can be days.
+
+Since v2026.09.013 a detector listed in the config that fails to load raises `SENTINEL|detectors_missing` (channel `infra`, severity `critical`). Before that release the situation was silent — the config asked for detectors, none loaded, and with nothing reading the logs the stale cleanup resolved their issues within the hour, leaving an instance that reported OK while monitoring nothing.
+
+If a plugin directory holds `__pycache__` entries whose `.py` counterparts are gone, that is the signature. The `.pyc` timestamps also tell you **which version** was last running — read them before restoring from a copy that may be older.
+
 ## Architecture
 
 ```

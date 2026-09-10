@@ -22,6 +22,21 @@ Repozitář `sentinel-plugins` obsahuje **11 detektorů**, každý čte log stre
 
 ---
 
+## Detektory v odděleném repozitáři
+
+Ne každý detektor je součástí Sentinelu. Ty specifické pro dané pracoviště — HPC clustery, ECC počítadla, chlazení — se běžně drží ve vlastním repozitáři a nasazují do `PLUGIN_DIR` vedle vestavěných pluginů.
+
+To uspořádání má dvě pasti a obě už v provozu sklaply:
+
+- **Žádný deploy balíčku `Sentinel` je tam nedostane.** Potřebují vlastní deploy krok; bez něj můžou soubory prostě chybět, zatímco `config.yaml` je pořád vyjmenovává.
+- **Nikdy `rsync --delete` do adresáře pluginů.** Oddělený repozitář neobsahuje pluginy dodávané se Sentinelem, takže `--delete` je smaže.
+
+Třetí úskalí není v nástrojích, ale v načasování: běžící proces si naimportované moduly drží v paměti, takže detektory se smazanými zdrojovými soubory **fungují dál až do dalšího restartu**. Mezi smazáním a restartem, který to odhalí, můžou uběhnout dny.
+
+Od v2026.09.013 detektor, který config vyžaduje a nenačte se, založí `SENTINEL|detectors_missing` (kanál `infra`, severity `critical`). Před tou verzí byla tahle situace tichá — config detektory chtěl, nenačetl se žádný, a protože logy neměl kdo číst, stale cleanup do hodiny uklidil jejich issues a zůstala instance, která hlásí OK a přitom nemonitoruje nic.
+
+Pokud v adresáři pluginů leží `__pycache__` se záznamy, ke kterým chybí `.py`, je to ten podpis. Časy `.pyc` navíc říkají, **která verze** naposled běžela — přečtěte si je dřív, než obnovíte z kopie, která může být starší.
+
 ## Architektura
 
 ```

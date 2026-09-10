@@ -1,4 +1,4 @@
-# Sentinel Commander — Technical Documentation (v2026.09.011)
+# Sentinel Commander — Technical Documentation (v2026.09.016)
 
 Intended for system architects, L3 support, and infrastructure administrators. Covers internal mechanisms, daemon stability, memory management, and OS integration.
 
@@ -157,6 +157,7 @@ All state is stored in `/var/log/sentinel/logs/sentinel_state.db` in WAL (Write-
 | `action_audit` | Append-only compliance log — every lifecycle event with actor and timestamp |
 | `config_audit` | Config change audit — who, when, IP, which keys |
 | `task_queue` | AI worker queue — status, worker_id (single-consumer guarantee) |
+| `user_audit` | Every login, local and LDAP — `auth_source`, `first_seen`, `last_login`, `last_ip`, `login_count`, `online_seconds`. Distinct from `user_roles`, which only holds users whose role someone changed |
 | `telemetry` | TSDB — metric, value, timestamp (composite indexes, batched writes) |
 | `agents` | Agent registry — hostname, token, last_seen, status, ip_addresses, version |
 | `active_sessions` | Session tracking — user, ip, created_at, last_seen, revokable |
@@ -206,6 +207,20 @@ The agent path used to close every active session for a host and re-insert them 
 so sessions are now reconciled on `(server, tty, login time)`: an ongoing session is confirmed via `last_seen`, a new one inserted, an unreported one closed. Two concurrent sessions from the same IP stay separate — hence the `tty` column — and re-login on the same pts is a new session because the login time differs.
 
 Sessions a detector simply stops reporting are closed by a per-minute sweep (`root_audit_stale_minutes`, default 30). This is needed because `add_root_audit()` is idempotent: an ongoing session is confirmed silently, so without `last_seen` there is no way to tell it from an abandoned record — and the daily pruning only deletes `is_active=0`, so stale active rows survived indefinitely (records 67 days old were still displayed as live).
+
+## Detector Self-Check
+
+`load_plugins()` compares the enabled detectors in `config.yaml` against those actually loaded and raises `SENTINEL|detectors_missing` (channel `infra`, severity `critical`) for the difference; the issue clears itself once they load again.
+
+This exists because the failure is silent by construction. A running process keeps imported modules in memory, so detectors whose source files are deleted keep working until the next restart. After that restart nothing reads their logs, the stale cleanup resolves their issues within the hour, and the instance looks healthy while producing nothing. The check turns two days of false calm into one issue.
+
+The self-check cannot abort startup — it is wrapped — but a failure inside it is logged rather than swallowed.
+
+## Login Audit
+
+`user_audit` is written from `_complete_login()`, the single point every login passes through, so an LDAP user who was never assigned a role still gets a record. `user_roles` alone could not serve this: it only holds users whose role someone changed.
+
+Accumulated online time is computed in `session_remove()` **before** the row is deleted — the duration lives in `created_at`/`last_seen` of `active_sessions` and would disappear with it. Implausible values (negative, longer than a week) are discarded so one broken session cannot skew the total.
 
 ## Security Layer
 

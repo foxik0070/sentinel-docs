@@ -1,4 +1,4 @@
-# Sentinel Commander — Programátorská dokumentace (v2026.09.011)
+# Sentinel Commander — Programátorská dokumentace (v2026.09.016)
 
 Určeno pro vývojáře a DevOps inženýry píšící vlastní detekční pluginy, integrující Sentinel s externími nástroji nebo upravující jádro systému.
 
@@ -243,6 +243,17 @@ Payload je normalizován a vložen do standardní issue pipeline (stejně jako v
 | `ChatService.build_alerts_context(limit=15)` | `chat_service.py` | Přehled aktivních issues pro AI kontext. Sdílená pro streamovanou i neproudovou větev chatu — dřív ji posílala jen jedna, takže UI odpovídalo z knowledge base. |
 | `ChatService._loads_repaired(candidate)` | `chat_service.py` | Poslední pokus o JSON, kde model použil neplatnou escape sekvenci (shellový regex `'a\|b'`). Zdvojí osamocená lomítka. |
 | `config.apply_extra_body(payload)` | `config.py` | Přimíchá `ollama_extra_body` do těla OpenAI `/v1` požadavku. Volat jen na /v1 větvích. |
+| `ChatService.build_logs_context(max_files, lines_per_file, max_chars)` | `chat_service.py` | Konec log souborů, ke kterým se vážou aktivní issues, seřazené podle počtu issues. Cesta pochází z databáze, takže prochází `_safe_log_path()` — upravený záznam nesmí nechat model přečíst libovolný soubor. |
+| `ChatService.build_alerts_context(limit)` | `chat_service.py` | Přehled aktivních issues; sdílené pro obě větve chatu. |
+| `plugin_manager._report_load_result()` | `plugin_manager.py` | Porovná zapnuté detektory z configu proti načteným; rozdíl zapíše jako `SENTINEL\|detectors_missing`. |
+| `state_agents.user_audit_login(username, ip, auth_source)` | `state_agents.py` | Zaznamená přihlášení. Volá se z `_complete_login()`, jediného místa, kudy projde každý login. |
+| `state_agents.user_audit_add_online(username, seconds)` | `state_agents.py` | Přičte délku skončené relace; nesmyslné hodnoty zahodí. |
+| `state_agents.get_user_audit()` | `state_agents.py` | Audit spojený s aktuální rolí a počtem živých relací. Řádky skládá z `cursor.description`, ne přes `row_factory` — `sqlite3` je tu stdlib, kdežto `__main__` podstrčí do `sys.modules` pysqlite3. |
+
+> **Streamovací generátor nesmí sahat na `g`** — běží až po návratu view. Potřebné hodnoty zachyťte předem do lokální proměnné; hlídá to `TestSseGeneratorsAvoidRequestContext`.
+>
+> **Nikdy druhá osa y na jednom grafu.** Dvě měřítka umí vyrobit libovolnou korelaci. Dvě veličiny porovnávejte jako dva grafy se společnou osou x; hlídá to `TestMetricChartNoDualAxis`.
+
 
 > **Pozor na `g` ve streamovacích generátorech.** SSE generátor se vyhodnocuje až po návratu view, kdy Flask request kontext neexistuje — `g.username` uvnitř vyhodí `RuntimeError`, generátor umře a spojení se utne uprostřed streamu. Hodnotu zachyťte do lokální proměnné **před** definicí generátoru. Test `TestSseGeneratorsAvoidRequestContext` to hlídá.
 

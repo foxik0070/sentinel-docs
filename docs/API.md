@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.09.011)
+# Sentinel API Reference (v2026.09.016)
 
 Complete API documentation for plugins, agents, and external integrations.
 
@@ -231,6 +231,7 @@ The optional `metrics` object is evaluated against `agent_thresholds` rules — 
 | POST | `/api/plugins/reload` | admin | Hot-reload all plugins |
 | GET | `/api/plugins/<name>/log` | read | Recent issue records produced by one detector (`limit`, max 500). Backs the **Log** button in the Detectors & Plugins table |
 | GET | `/api/root_audit` | read | Root session history. Returns `cluster`, `tty` and `origin` (`detector`/`agent`) per record. Limited to the last `root_audit_history_per_cluster` (default 30) **per cluster** rather than globally — a single busy cluster used to consume the whole window. Active sessions are always included |
+| GET | `/api/users/roles` | superadmin | Users with their role **and audit data** — `auth_source` (`local`/`ldap`), `first_seen`, `last_login`, `last_ip`, `login_count`, `online_seconds`, `active_sessions`. Users who only ever logged in (never had a role assigned) are included; before v2026.09.012 they were invisible here |
 | GET | `/api/queue/details` | read | Request queue. `requests` lists the AI requests actually in flight (`status`: `waiting` on the semaphore, `processing` running) followed by DB `task_queue` rows. In-flight entries carry `cancellable: false` — they are HTTP threads, not queue rows |
 | GET | `/api/patterns` | read | List custom detection patterns |
 | POST | `/api/patterns` | admin | Add pattern |

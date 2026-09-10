@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.09.011)
+# Sentinel Commander — Dokumentace (v2026.09.016)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.09.011
+                    v2026.09.016
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,11 +43,11 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.09.011 systém obsahuje **1 165 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.09.016 systém obsahuje **1 188 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
 
 ---
 
-## Co je nového ve v2026.09.001 – v2026.09.011 (2026-09-08)
+## Co je nového ve v2026.09.001 – v2026.09.016 (2026-09-08)
 
 | Vlastnost | Detail |
 |---|---|
@@ -249,7 +249,7 @@ Ve verzi v2026.09.011 systém obsahuje **1 165 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 087 automatizovaných testů** (v2026.09.011) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 087 automatizovaných testů** (v2026.09.016) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`

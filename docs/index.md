@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.09.011)
+# Sentinel Commander — Documentation (v2026.09.016)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.09.011
+                    v2026.09.016
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,11 +43,11 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.09.011 the system has accumulated **1 165 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.09.016 the system has accumulated **1 188 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
 
 ---
 
-## What's New in v2026.09.001 – v2026.09.011 (2026-09-08)
+## What's New in v2026.09.001 – v2026.09.016 (2026-09-08)
 
 | Feature | Detail |
 |---|---|
@@ -195,7 +195,7 @@ As of v2026.09.011 the system has accumulated **1 165 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 165 automated tests** (v2026.09.011) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 188 automated tests** (v2026.09.016) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 

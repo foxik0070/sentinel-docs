@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Troubleshooting Guide (v2026.09.011)
+# Sentinel Ecosystem — Troubleshooting Guide (v2026.09.016)
 
 Common issues and solutions across all Sentinel components.
 
@@ -206,13 +206,49 @@ service.log_event("rag_chat_stream", "Streaming response sent",
 
 ---
 
+### Everything reports OK but detectors are clearly not running
+
+**Symptom:** the dashboard is green, no issues from log-based detectors, yet the monitored infrastructure obviously has problems. Nothing in the journal.
+
+**Cause:** the detector source files were gone from the plugin directory. The catch is *when* it surfaces — a running process keeps imported modules in memory, so the detectors carry on working for as long as the service is up. **Only a restart exposes the deletion.** After it, `plugin_manager` logs one line per detector it cannot find and carries on; nothing reads the logs, so the stale cleanup resolves all their issues within the hour and the instance looks healthy.
+
+On the affected instance the config asked for 12 detectors, 0 were loaded, and it reported OK for two days.
+
+**Fix (v2026.09.013):** `load_plugins()` compares the enabled detectors in `config.yaml` against those actually loaded and raises `SENTINEL|detectors_missing` (channel `infra`, severity `critical`) naming the missing ones. It clears itself once they are back. Disabled detectors are not counted.
+
+**Diagnosis on an older release:**
+
+```bash
+grep -c '^- plugin:' /etc/sentinel/config.yaml                 # how many are configured
+journalctl -u Sentinel.service | grep -c 'PluginManager: Loaded'  # how many actually loaded
+ls /opt/Sentinel/sentinel/plugins/detector_*.py                # are the sources there at all
+```
+
+A `__pycache__` holding `.pyc` files with no matching `.py` next to them is the tell: the modules were imported once and the sources were removed afterwards. The `.pyc` timestamps also say **which version** was last running — worth reading before restoring from a copy that may be older.
+
+> **Detectors kept in a separate repository need their own deploy step.** They are not part of the `Sentinel` package, so no deploy of it will place them. Never `rsync --delete` into the plugin directory either — it would remove the plugins that *do* ship with Sentinel.
+
+---
+
+### Phantom "SSH tunnel" client in the connected list
+
+**Symptom:** a user (usually `admin`) from "SSH tunnel" with "ISP unavailable" that never disconnects and that nobody recognises.
+
+**Cause (pre-v2026.09.015):** Sentinel monitoring itself. The internal watchdog calls its own `/api/status_check` every 30 s authenticating as `WEB_USER`, and `requires_auth` records every authenticated request in the connection tracker. The resulting entry has IP `127.0.0.1`, which the UI renames to "SSH tunnel"; "ISP unavailable" simply follows from a loopback address having no provider to look up. The security-header self-check did the same.
+
+**Fix (v2026.09.015):** both internal calls send `X-Sentinel-Self-Check` and the tracker skips them.
+
+> Adding `127.0.0.1` to `excluded_client_ips` looks simpler and is the wrong fix: **real people reach the UI through an SSH tunnel** and that label exists for them. Excluding loopback would hide them too. A header distinguishes your own call from someone else's; an IP cannot.
+
+---
+
 ### Chat answers from the knowledge base instead of from current issues
 
 **Symptom:** asked to analyse active problems, the assistant replies about topics from KB documents (user accounts, storage quotas) rather than the alerts that are actually firing.
 
 **Cause (pre-v2026.09.011):** the streaming chat path — the one the web UI uses — assembled its context from conversation history, knowledge base and the question only. Active issues were not included at all, so the model answered from the only material it had. The older non-streaming path *did* send an alert summary, so the UI had less context than the code path it replaced.
 
-**Fix (v2026.09.011):** `ChatService.build_alerts_context()` is shared by both paths — 15 most recent issues with host, channel and severity, plus the total count. An empty state is stated explicitly, otherwise the model infers problems from the KB.
+**Fix (v2026.09.016):** `ChatService.build_alerts_context()` is shared by both paths — 15 most recent issues with host, channel and severity, plus the total count. An empty state is stated explicitly, otherwise the model infers problems from the KB.
 
 ---
 

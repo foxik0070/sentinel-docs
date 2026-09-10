@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Deployment Guide (v2026.09.011)
+# Sentinel Ecosystem — Deployment Guide (v2026.09.016)
 
 Complete guide for deploying the entire Sentinel monitoring ecosystem in production.
 
@@ -96,7 +96,13 @@ fim:
 # Root session audit (v2026.09.001+)
 root_audit_stale_minutes: 30        # close sessions a detector stopped reporting
 root_audit_history_per_cluster: 30  # history shown per cluster, not globally
+
+# Log excerpts sent to the model as chat context (v2026.09.016+)
+chat_logs_max_files: 5              # files, picked by how many active issues reference them
+chat_logs_lines: 40                 # last N lines from each
 ```
+
+> **Chat context is capped.** Only files that active issues actually reference are sent, ordered by issue count, and the whole block is truncated at 6 000 characters. The path is read from the database and forced through the LOG_DIR containment check — a doctored record must not be able to make the model read arbitrary files.
 
 > **FIM only started working in v2026.09.004.** The `fim:` block above existed and was documented earlier, but nothing ever called the check — its only caller was a dead module removed in v2026.08.003. If you configured FIM before that release, it was silently doing nothing; the first run after upgrading records a baseline without alerting, so expect no findings until something actually changes.
 
@@ -137,6 +143,8 @@ curl -s http://localhost:5050/healthz
 ```
 
 ---
+
+> **Detectors kept in a separate repository need their own deploy step.** If your detectors live outside the `Sentinel` package, no deploy of it will place them into `PLUGIN_DIR` — deploy that repository separately. Never `rsync --delete` into the plugin directory: it would remove the plugins that ship with Sentinel. Since v2026.09.013 a detector that the config asks for but that fails to load raises `SENTINEL|detectors_missing`, so a missing deploy step is visible within a minute instead of going unnoticed.
 
 ## 2. sentinel-plugins
 

@@ -1,4 +1,4 @@
-# Sentinel Commander — Programmer Documentation (v2026.09.011)
+# Sentinel Commander — Programmer Documentation (v2026.09.016)
 
 Intended for developers and DevOps engineers writing custom detection plugins, integrating Sentinel with external tools, or modifying the system core.
 
@@ -243,6 +243,17 @@ The payload is normalised and injected into the standard issue pipeline (same as
 | `ChatService.build_alerts_context(limit=15)` | `chat_service.py` | Active-issue summary for AI context. Shared by the streaming and non-streaming chat paths — only one of them used to send it, so the UI answered from the knowledge base. |
 | `ChatService._loads_repaired(candidate)` | `chat_service.py` | Last-resort JSON parse when the model used an invalid escape (a shell regex such as `'a\|b'`). Doubles lone backslashes. |
 | `config.apply_extra_body(payload)` | `config.py` | Merge `ollama_extra_body` into an OpenAI `/v1` request body. Call only on /v1 branches. |
+| `ChatService.build_logs_context(max_files, lines_per_file, max_chars)` | `chat_service.py` | Tail of the log files that active issues reference, ordered by issue count. The path comes from the database, so it goes through `_safe_log_path()` — a doctored record must not make the model read arbitrary files. |
+| `ChatService.build_alerts_context(limit)` | `chat_service.py` | Active-issue summary; shared by both chat paths. |
+| `plugin_manager._report_load_result()` | `plugin_manager.py` | Compares enabled detectors in config against those loaded; raises `SENTINEL\|detectors_missing` for the difference. |
+| `state_agents.user_audit_login(username, ip, auth_source)` | `state_agents.py` | Records a login. Called from `_complete_login()`, the one point every login passes through. |
+| `state_agents.user_audit_add_online(username, seconds)` | `state_agents.py` | Adds a finished session's duration; implausible values are discarded. |
+| `state_agents.get_user_audit()` | `state_agents.py` | Audit joined with the current role and live session count. Builds rows from `cursor.description` rather than `row_factory` — `sqlite3` here is stdlib while `__main__` swaps pysqlite3 into `sys.modules`. |
+
+> **A streaming generator must not touch `g`** — it runs after the view returns. Capture what you need into a local first; `TestSseGeneratorsAvoidRequestContext` enforces it.
+>
+> **Never a second y-axis on one chart.** Two scales can manufacture any correlation. Compare two measures as two charts sharing the x axis; `TestMetricChartNoDualAxis` enforces it.
+
 
 > **Beware of `g` inside streaming generators.** An SSE generator is evaluated after the view returns, when Flask's request context is gone — `g.username` inside raises `RuntimeError`, the generator dies and the connection is cut mid-stream. Capture the value into a local before defining the generator. `TestSseGeneratorsAvoidRequestContext` enforces this.
 
