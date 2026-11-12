@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.09.016)
+# Sentinel API Reference (v2026.11.004)
 
 Complete API documentation for plugins, agents, and external integrations.
 
@@ -255,6 +255,57 @@ The optional `metrics` object is evaluated against `agent_thresholds` rules — 
 | GET | `/api/timezone/info` | read | Configured display timezone |
 | GET | `/api/timezone/convert` | read | Convert timestamp to display TZ |
 | GET | `/api/kb/reindex` | admin | Trigger RAG knowledge base reindex |
+
+---
+
+### AI Sessions
+
+Captured AI agent sessions reported by `agent_ai_session_monitor`. Stored outside the
+issue table, so nothing alerts and nothing lingers as an open issue.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/ai_sessions` | read | Captured AI sessions — running ones always returned, finished ones capped per host |
+
+Each row carries `host`, `cluster`, `user`, `tool`, `category` (`cli` / `runtime` /
+`mcp` / `api`), `model`, `pid`, `cwd`, `cmdline`, `remote`, `started_at`,
+`first_seen`, `last_seen`, `ended_at` and `is_active`. A session is identified by
+`(host, pid, started_at)`; a repeated poll confirms the row instead of inserting a
+new one. `GET /api/status` additionally returns `ai_sessions` — the number of
+currently running sessions, used by the header badge.
+
+Retention is driven by `ai_sessions_retention_days` (30),
+`ai_sessions_history_per_host` (30) and `ai_sessions_stale_minutes` (30); the last
+one closes sessions from a host whose agent stopped reporting altogether.
+
+---
+
+### API Keys (self-service)
+
+Long-lived keys for scripts, passed in the `X-API-Key` header. A user manages their
+own keys; the secret is shown once, at creation.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/apikeys` | read | List the caller's keys (metadata only, never the secret) |
+| POST | `/api/apikeys` | read | Create a key — the plaintext secret is returned once |
+| DELETE | `/api/apikeys/<key_id>` | read | Revoke one of the caller's keys |
+
+> Pass the key in the header, never in the URL — query strings end up in proxy and
+> browser logs.
+
+---
+
+### Request Tracker (RT)
+
+Ticket integration; available when RT is configured.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/rt/tickets` | read | List tickets, optional `queue` and `q` filters |
+| POST | `/api/rt/comment` | write | Add a comment to a ticket (recorded with its author) |
+| POST | `/api/rt/take` | write | Take ownership of a ticket |
+| POST | `/api/rt/status` | write | Change ticket status |
 
 ---
 

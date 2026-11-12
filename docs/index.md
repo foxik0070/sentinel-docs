@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.09.016)
+# Sentinel Commander — Documentation (v2026.11.004)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.09.016
+                    v2026.11.004
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,11 +43,31 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.09.016 the system has accumulated **1 188 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.11.004 the system has accumulated **1 229 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
 
 ---
 
-## What's New in v2026.09.001 – v2026.09.016 (2026-09-08)
+## What's New in v2026.10.001 – v2026.11.004 (2026-11-12)
+
+| Feature | Detail |
+|---|---|
+| **Prompt injection: logs as data, not instructions** | `ai_guard.wrap_untrusted()` existed, but only diagnostics, knowledge and incident analysis used it. Chat bypassed it — the log tail, alert lines, the open file's contents and the autofix message all went into the prompt bare, in the same message as the user's question, so an "ignore previous instructions" line from a log was indistinguishable from an instruction. All paths are now fenced, system prompts carry `UNTRUSTED_RULE`, and the reply stored in history goes through `sanitize()` |
+| **Fencing applies to every prompt** | After the chat fix about 15 places remained where `last_line` or log content reached the model bare — escalation, remediation, cause chain, pattern suggestions, the daily digest, re-analysis, root cause, bulk analysis, clusters, runbooks, postmortems. All now go through `ai_guard.untrusted()`. Only what does not come from logs stays unfenced: telemetry, trends, comments by signed-in users, and static evals |
+| **Warning on risky commands in replies** | `ai_guard.risky_commands()` runs code blocks and inline commands from the reply through `safety.classify()`; risky ones get a warning under the answer. The model runs nothing itself, but the user copies the command — autofix had a risk score, free chat did not |
+| **"AI users" overview** | A new view: who runs AI on which machine, with which tool and model, and for how long. It covers interactive CLI agents, local LLM runtimes, MCP servers, and processes holding a connection to a provider API that cannot be recognised by name. The data arrives from the agent outside the issue table, so nothing alerts and nothing lingers |
+| **Session identity** | A session is identified by `(host, pid, started_at)`. A pid is recycled after a reboot; a process start time does not change between polls — so a repeated poll only confirms the row. `started_at` is stored as an empty string rather than `NULL`: two `NULL`s are not equal in a `UNIQUE` index, so a session with an unknown start time could not be deduplicated |
+| **Collapsible overview by technology** | The modal nests **technology → agent → user → session**, each level carrying a "running / total" count. With hundreds of concurrent processes a flat list is unreadable. What the user collapses stays collapsed across refreshes |
+| **Header count did not match the view** | The badge counted every running session, but the endpoint capped rows per host without distinguishing state — a host with hundreds of processes returned only the cap. The cap now applies to finished sessions only; running ones always pass |
+| **Sessions left behind by a dead agent** | A session is closed by being absent from its host's next snapshot. If an agent stops reporting altogether, no snapshot arrives and its sessions stay "running" forever. Anything unconfirmed for longer than `ai_sessions_stale_minutes` (30) is now closed |
+| **Self-service API keys** | Users manage their own long-lived keys for scripts (`X-API-Key`); the secret is shown once, at creation. Passing a key in the URL is restricted — query strings end up in proxy and browser logs |
+| **Request Tracker integration** | Ticket listing with queue and text filters, commenting with the author recorded, taking ownership, and status changes |
+| **Less detector noise** | Resolved disk findings disappear, loopback ports are no longer treated as new, container temperature is not measured against the host, and known messages no longer raise issues |
+| **Remediation plan for viewers** | The `viewer` role could have a plan generated but not displayed. Plus parameter validation on `logs/view` and a fix to the default role assigned on LDAP login |
+| **Tests: 1 188 → 1 229** | New ones cover the AI session store (identity, closing, retention), untrusted-data fencing, and the quieter detectors |
+
+---
+
+## What Was New in v2026.09.001 – v2026.09.016 (2026-09-08)
 
 | Feature | Detail |
 |---|---|
@@ -195,7 +215,7 @@ As of v2026.09.016 the system has accumulated **1 188 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 188 automated tests** (v2026.09.016) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 229 automated tests** (v2026.11.004) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 

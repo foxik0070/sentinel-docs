@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.09.016)
+# Sentinel Commander — Dokumentace (v2026.11.004)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.09.016
+                    v2026.11.004
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,11 +43,31 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.09.016 systém obsahuje **1 188 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.11.004 systém obsahuje **1 229 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
 
 ---
 
-## Co je nového ve v2026.09.001 – v2026.09.016 (2026-09-08)
+## Co je nového ve v2026.10.001 – v2026.11.004 (2026-11-12)
+
+| Vlastnost | Detail |
+|---|---|
+| **Prompt injection: logy jako data, ne jako pokyny** | `ai_guard.wrap_untrusted()` existoval, ale používala ho jen diagnostika, knowledge a analýza incidentů. Chat ho obcházel — ocas logů, řádky alertů, obsah otevřeného souboru i hláška pro autofix šly do promptu holé, ve stejné zprávě jako otázka uživatele, takže řádek „ignore previous instructions" z logu model nijak neodlišil od pokynu. Všechny cesty jsou teď ohraničené, system prompty nesou `UNTRUSTED_RULE` a odpověď ukládaná do historie prochází `sanitize()` |
+| **Ohraničení platí pro všechny prompty** | Po opravě chatu zbylo asi 15 míst, kde `last_line` nebo obsah logu šel do modelu holý — eskalace, remediace, řetěz příčin, návrh patternů, denní digest, re-analýza, root cause, hromadná analýza, clustery, runbook, postmortem. Všechna procházejí `ai_guard.untrusted()`. Neobalené zůstává jen to, co z logů nepochází: telemetrie, trend, komentáře přihlášených uživatelů a statické evaly |
+| **Varování u rizikových příkazů v odpovědi** | `ai_guard.risky_commands()` prožene code bloky i inline příkazy z odpovědi přes `safety.classify()`; u rizikových se pod odpovědí ukáže varování. Model sám nic nespustí, ale uživatel příkaz zkopíruje — autofix risk skóre měl, volný chat ne |
+| **Přehled „AI uživatelé"** | Nový pohled: kdo na strojích pouští AI, jakým nástrojem, s jakým modelem a jak dlouho. Pokrývá interaktivní CLI agenty, lokální LLM runtimy, MCP servery a procesy držící spojení na API poskytovatele, které nejde poznat podle jména. Data chodí od agenta mimo tabulku issues, takže nic nealertuje a nic nevisí |
+| **Identita sezení** | Sezení se pozná podle `(host, pid, started_at)`. Samotný pid se po restartu stroje recykluje, čas startu procesu se mezi polly nemění — opakovaný poll proto řádek jen potvrdí. `started_at` se ukládá jako prázdný řetězec, ne `NULL`: dva `NULL` se v `UNIQUE` indexu nerovnají a sezení bez známého času startu by se dedupovat nedalo |
+| **Skládací přehled po technologiích** | Modal se skládá po úrovních **technologie → agent → uživatel → sezení**, každá s počtem „běží / celkem". Při stovkách souběžných procesů je plochý seznam nečitelný. Co uživatel zavře, zůstane zavřené i po obnovení |
+| **Počet v hlavičce nesedel na obsah** | Odznak počítal všechna běžící sezení, ale endpoint je protahoval stropem na stroj, který nerozlišoval stav — stroj se stovkami procesů jich vrátil jen tolik, kolik je strop. Strop nyní platí jen na ukončená sezení, běžící projdou vždy |
+| **Sezení po spadlém agentovi** | Sezení se uzavírá tím, že chybí v dalším snímku svého stroje. Když agent přestane hlásit úplně, žádný snímek nepřijde a sezení zůstanou „běžící" navždy. Nově se uzavře, co nikdo nepotvrdil déle než `ai_sessions_stale_minutes` (30) |
+| **Self-service API klíče** | Uživatel si spravuje vlastní dlouhodobé klíče pro skripty (`X-API-Key`); tajná část se ukáže jen jednou, při vytvoření. Klíč v URL je omezený — query stringy končí v logách proxy i prohlížeče |
+| **Integrace s Request Trackerem** | Výpis tiketů s filtrem podle fronty a textu, komentář se záznamem autora, převzetí tiketu a změna stavu |
+| **Méně šumu z detektorů** | Vyřešené záchyty disku mizí, loopback porty se neberou jako nové, teplota kontejnerů se neměří proti hostiteli a známé hlášky už nezakládají issues |
+| **Remediation plan i pro viewer** | Role `viewer` si směla nechat vygenerovat plán, ale ne ho zobrazit. K tomu validace parametrů u `logs/view` a oprava výchozí role při přihlášení přes LDAP |
+| **Testy: 1 188 → 1 229** | Nové pokrývají úložiště AI sezení (identita, uzavírání, retence), ohraničení nedůvěryhodných dat a detektory s méně šumem |
+
+---
+
+## Co bylo nového ve v2026.09.001 – v2026.09.016 (2026-09-08)
 
 | Vlastnost | Detail |
 |---|---|
@@ -249,7 +269,7 @@ Ve verzi v2026.09.016 systém obsahuje **1 188 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 087 automatizovaných testů** (v2026.09.016) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 229 automatizovaných testů** (v2026.11.004) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`
