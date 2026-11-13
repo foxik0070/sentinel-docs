@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.11.004)
+# Sentinel Commander — Dokumentace (v2026.11.008)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.004
+                    v2026.11.008
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,11 +43,26 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.11.004 systém obsahuje **1 229 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.11.008 systém obsahuje **1 260 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
 
 ---
 
-## Co je nového ve v2026.10.001 – v2026.11.004 (2026-11-12)
+## Co je nového ve v2026.11.005 – v2026.11.008 (2026-11-13)
+
+| Vlastnost | Detail |
+|---|---|
+| **Scope `read:root` — přehled bez práva zápisu** | Role se odvozuje ze **scope klíče**, ne od jeho vlastníka. Na `admin`/`superadmin` ale mapovaly jedině scopy, které umí i zapisovat, takže nástroj, který z principu jen čte, musel volit mezi úplným přehledem a menším rozsahem škody při úniku klíče. Nový `read:root` zůstává v roli `viewer` a viditelnost kanálu ROOT řeší samostatným oprávněním. Vydat ho smí i `admin` — ROOT už v UI vidí, takže čtecí klíč se stejným rozsahem není eskalace |
+| **Verze serveru v `status_check`** | `GET /api/status_check` vrací `version`. Klienti do té doby odhadovali schopnosti serveru podle toho, jestli v datech našli konkrétní pole — fungovalo to, ale byla to detekce po hmatu |
+| **Surová pole v `/api/v1/issues`** | `first_seen`, `occurrence_count`, `plugin_name`, `db_severity`, `acknowledged_by` a `snoozed_until`. Bez nich si klient neuměl spočítat stáří problému ani ho seřadit podle skutečné závažnosti a musel si je dobírat druhým voláním. Pole `severity` zůstává odvozené z kanálu kvůli mobilní aplikaci, pravá hodnota z DB je vedle jako `db_severity` |
+| **`?include_ignored=1`** | Vrátí i ignorované issues, označené příznakem `ignored`. Záměrně opt-in: bez parametru se chování nemění, aby se stávajícím klientům neobjevily položky, které si jejich uživatel schoval |
+| **Dvě tlačítka u karet issue nedělala nic** | Ikona „Přidat komentář (inline)" a tečka barevného štítku vykreslovaly `onclick` na funkce, které ve frontendu vůbec neexistovaly. Klik skončil chybou v konzoli — bez hlášky a bez požadavku na server. Backend byl přitom u obou hotový. Nový test teď prochází všechny `on*="fn(…)"` atributy a ověřuje, že ke každému existuje funkce |
+| **Komentáře přímo v kartě** | Daly se přečíst jen po rozkliknutí odznaku s číslem, takže kdo seznam přelétl, nevěděl, že k problému někdo něco napsal. Nově se kreslí v kartě vlastní barvou; poslední tři, zbytek za odkazem do modalu. Načítají se jedním dotazem pro celý seznam |
+| **Rozepsaný komentář přežije obnovu** | Modal se překresluje každé 3 sekundy a řádek pro komentář se vykresluje zavřený, takže obnova ho zavřela i s textem. Víc než tři vteřiny psaní se nedalo stihnout. Obnova teď pamatuje otevřené řádky, jejich obsah, pozici kurzoru i fokus |
+| **Testy: 1 229 → 1 260** | Nové pokrývají scope `read:root` (hlavně to, že neumí zapisovat), surová pole a `include_ignored`, komentáře v kartě a existenci funkcí za `onclick` |
+
+---
+
+## Co bylo nového ve v2026.10.001 – v2026.11.004 (2026-11-12)
 
 | Vlastnost | Detail |
 |---|---|
@@ -269,7 +284,7 @@ Ve verzi v2026.11.004 systém obsahuje **1 229 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 229 automatizovaných testů** (v2026.11.004) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 260 automatizovaných testů** (v2026.11.008) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`

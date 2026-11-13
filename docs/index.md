@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.11.004)
+# Sentinel Commander — Documentation (v2026.11.008)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.004
+                    v2026.11.008
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,11 +43,26 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.11.004 the system has accumulated **1 229 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.11.008 the system has accumulated **1 260 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
 
 ---
 
-## What's New in v2026.10.001 – v2026.11.004 (2026-11-12)
+## What's New in v2026.11.005 – v2026.11.008 (2026-11-13)
+
+| Feature | Detail |
+|---|---|
+| **`read:root` scope — full view without write access** | The role is derived from the **key's scope**, not from its owner. But only scopes that also grant writing mapped to `admin`/`superadmin`, so a read-only tool had to choose between the complete picture and a smaller blast radius if the key leaked. The new `read:root` stays in the `viewer` role and handles ROOT visibility as a separate permission. An `admin` may issue it — they already see ROOT in the UI, so a read-only key with the same reach is not an escalation |
+| **Server version in `status_check`** | `GET /api/status_check` now returns `version`. Until then clients guessed the server's capabilities from whether a particular field was present — it worked, but it was detection by touch |
+| **Raw fields in `/api/v1/issues`** | `first_seen`, `occurrence_count`, `plugin_name`, `db_severity`, `acknowledged_by` and `snoozed_until`. Without them a client could not compute a problem's age or sort by real severity, and had to fetch them with a second call. `severity` stays derived from the channel for the mobile app; the real DB value sits beside it as `db_severity` |
+| **`?include_ignored=1`** | Returns ignored issues too, marked with an `ignored` flag. Deliberately opt-in: without the parameter nothing changes, so existing clients do not suddenly show items their user has hidden |
+| **Two buttons on issue cards did nothing** | The "add inline comment" icon and the colour-label dot rendered `onclick` handlers for functions that did not exist in the frontend at all. The click ended in a console error — no message, no request to the server — while both backends were finished. A new test now walks every `on*="fn(…)"` attribute and checks that the function exists |
+| **Comments shown on the card** | They could only be read by opening the badge, so anyone scanning the list did not know somebody had already written something. They now render on the card in their own colour: the last three, the rest behind a link to the modal. Loaded with a single query for the whole list |
+| **A comment being typed survives the refresh** | The modal re-renders every 3 seconds and the comment row renders closed, so the refresh closed it along with the text. More than three seconds of typing was impossible. The refresh now remembers open rows, their contents, the caret position and focus |
+| **Tests: 1 229 → 1 260** | Covering the `read:root` scope (above all that it cannot write), the raw fields and `include_ignored`, comments on the card, and the existence of functions behind `onclick` |
+
+---
+
+## What Was New in v2026.10.001 – v2026.11.004 (2026-11-12)
 
 | Feature | Detail |
 |---|---|
@@ -215,7 +230,7 @@ As of v2026.11.004 the system has accumulated **1 229 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 229 automated tests** (v2026.11.004) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 260 automated tests** (v2026.11.008) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 

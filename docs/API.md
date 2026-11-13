@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.11.004)
+# Sentinel API Reference (v2026.11.008)
 
 Complete API documentation for plugins, agents, and external integrations.
 
@@ -19,12 +19,26 @@ API keys are created by a `superadmin` in Settings → REST API Keys. Each key c
 | Scope | Permissions |
 |---|---|
 | `read:issues` | GET endpoints — issues, agents, analytics, topology |
+| `read:root` | Same as `read:issues`, **plus the ROOT channel** — no write access (v2026.11.005+) |
 | `write:actions` | POST — agent ingest, approve/reject actions, create issues |
 | `admin:users` | Everything including patterns, reload, user/key management |
+
+> **The ROOT channel is a trap worth knowing about.** The role a request runs
+> under is derived from the key's **scope**, not from the user who created the
+> key. With `read` or `read:issues`, issues from the ROOT channel are simply
+> absent from the response — no error, no warning. Before v2026.11.005 the only
+> way to see them was `write` or `admin`, i.e. a key that can also change things.
+> `read:root` removes that trade-off and an `admin` may issue it; the write
+> scopes remain `superadmin`-only.
 
 **CSRF:** browser-session POST/PUT/DELETE requests require the `X-CSRF-Token` header (the web UI adds it automatically via a global `fetch` wrapper). Bearer-token calls are exempt.
 
 **2FA:** if TOTP is enrolled for the user, `POST /api/login` is followed by a second step with the 6-digit code. Manage via `/api/2fa/status|setup|enable|disable`.
+
+> **Version format:** `version` is **calendar** versioning `YYYY.MM.NNN`, not
+> semver — the sequence restarts each month (`2026.10.005` → `2026.11.001`), so
+> compare it as a tuple of integers. An empty string or a missing key means
+> "unknown" (older servers do not send the field), not "old".
 
 **Brute-force protection:** 5 failed logins → IP banned 300 s. `/api/analyze/*` endpoints are rate-limited to 10 req/min per IP.
 
@@ -131,7 +145,7 @@ Response sets `Set-Cookie: session=...` (HMAC-signed; absolute session timeout 1
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/v1/issues` | read | Active incidents as JSON array (incl. `plugin_name`) |
+| GET | `/api/v1/issues` | read | Active incidents as JSON array — see the field notes below |
 | GET | `/api/v1/issues/<key>` | read | Single incident detail |
 | DELETE | `/api/v1/issues/<key>` | admin | Hard delete incident |
 | POST | `/api/v1/issues/<key>/acknowledge` | admin | Acknowledge (→ yellow badge) |
@@ -225,6 +239,7 @@ The optional `metrics` object is evaluated against `agent_thresholds` rules — 
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/api/health` | — | `{"status": "ok"}` — used by watchdog |
+| GET | `/api/status_check` | read | Header counts (`issues`, `agent_issues`, `root_issues`, `security_issues`, `ai_sessions`) plus `version` — the server release, e.g. `"2026.11.008"` (v2026.11.005+) |
 | GET | `/healthz` | — | K8s/UptimeKuma JSON probe — DB check, 503 on failure |
 | GET | `/status` | — | Public status dashboard (HTML): CPU/RAM/Disk telemetry, anonymized recent incidents, online/offline agent table, infra/agent/security category breakdown |
 | GET | `/api/status` | read | Detailed system status (DB size, queue depth, AI latency) |
@@ -277,6 +292,32 @@ currently running sessions, used by the header badge.
 Retention is driven by `ai_sessions_retention_days` (30),
 `ai_sessions_history_per_host` (30) and `ai_sessions_stale_minutes` (30); the last
 one closes sessions from a host whose agent stopped reporting altogether.
+
+---
+
+### `/api/v1/issues` — fields
+
+Alongside the camelCase names the mobile app expects (`channelType`, `lastSeen`,
+`missingCount`, `logFile`, `lastLine`), the response carries the raw DB values
+(v2026.11.005+):
+
+| Field | Meaning |
+|---|---|
+| `first_seen` / `firstSeen` | When the problem was first recorded — the basis for its age |
+| `occurrence_count` / `occurrenceCount` | How many times it has recurred |
+| `plugin_name` / `pluginName` | Detector name (`log_file` carries the same value for backwards compatibility) |
+| `db_severity` / `dbSeverity` | **Real** severity from the database |
+| `acknowledged_by`, `snoozed_until` | Who acknowledged it, until when it is snoozed |
+| `ignored` | Whether the key is on the ignore list |
+
+> `severity` stays **derived from the channel** (`CRITICAL` for security/root,
+> otherwise `WARNING`) because the mobile app's `IssueModel.fromJson` depends on
+> it. Sort by `db_severity`, not by `severity`.
+
+**`?include_ignored=1`** additionally returns ignored issues, each marked
+`ignored: true`. Without the parameter they are dropped, exactly as before — the
+parameter is opt-in so that existing clients do not suddenly start showing items
+their user has hidden. Accepted values: `1`, `true`, `yes` (case-insensitive).
 
 ---
 
