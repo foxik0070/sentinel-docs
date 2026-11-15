@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Deployment Guide (v2026.11.008)
+# Sentinel Ecosystem — Deployment Guide (v2026.11.010)
 
 Complete guide for deploying the entire Sentinel monitoring ecosystem in production.
 
@@ -19,6 +19,31 @@ Complete guide for deploying the entire Sentinel monitoring ecosystem in product
    Monitored nodes    Agent nodes         sentinel-alert :5056
    (Overhealth)       (sentinel-agent)    sentinel-hw :5055
 ```
+
+---
+
+## Installing from Packages
+
+Every component is published as a `.deb` and an `.rpm`. Everything is pure Python, so the packages are architecture independent: **one `.deb`** covers Ubuntu 22.04/24.04/26.04 and Debian 12/13, **one `.rpm`** covers RHEL 8/9/10 and derivatives. Only the dependency metadata differs, and for RPM a rich dependency `(python3.12 or python3.11 or python3.10)` handles the fact that RHEL 8 defaults to Python 3.6 and RHEL 9 to 3.9.
+
+A release is a file to download; a **registry** is what lets a machine fetch the package through `apt` or `dnf`, upgrades included — that is how it should be installed in production.
+
+```bash
+# Debian / Ubuntu
+echo "deb [trusted=yes] https://<gitea>/api/packages/<owner>/debian stable main" \
+  > /etc/apt/sources.list.d/sentinel.list
+apt update && apt install sentinel
+
+# RHEL and derivatives
+dnf config-manager --add-repo https://<gitea>/api/packages/<owner>/rpm.repo
+dnf install sentinel
+```
+
+Components whose dependencies exist only on PyPI (`sentinel`, `sentinel-alert`, `sentinel-console`) build a virtualenv in `postinst`, which **requires network access**. If that fails, the package install fails loudly rather than leaving a configured package with a service that cannot start.
+
+Two components' install paths are worth knowing: Sentinel installs into `/opt/Sentinel` (capital S, matching `install.sh` and the docs), and `sentinel-alert` keeps its runtime data in `/var/lib/sentinel-alert` rather than next to the code, so an upgrade cannot overwrite the attack database or the inventories.
+
+Version numbers are calendar based, `YYYY.MM.NNN`, **per component** — the sequence restarts every month, so `sentinel-alert 2026.11.001` is newer than `2026.10.001` and has nothing to do with Sentinel's own number. A trailing `-N` is the package revision: it goes up when only the packaging changed and the program did not.
 
 ---
 
@@ -148,17 +173,26 @@ curl -s http://localhost:5050/healthz
 
 ## 2. sentinel-plugins
 
-Plugins ship with Sentinel but can also be deployed from the separate repository for custom detectors.
+Sentinel ships only the base — `base.py` plus `system_detector` and `services_detector`. The other ten detectors come from this package.
 
 ```bash
-# Deploy from separate repo
-git clone git@github.com:foxik0070/sentinel-plugins.git \
-  /opt/Sentinel/sentinel/plugins/external
-
-# Register in config.yaml
-detectors:
-  plugins_dir: /opt/Sentinel/sentinel/plugins/external
+apt install sentinel-plugins     # Debian / Ubuntu
+dnf install sentinel-plugins     # RHEL and derivatives
 ```
+
+They land in `/opt/sentinel-plugins`. Point Sentinel at that directory by making `plugin_dir` a **list** (v2026.11.010 and later):
+
+```yaml
+plugin_dir:
+  - /opt/Sentinel/sentinel/plugins   # the base that ships with Sentinel
+  - /opt/sentinel-plugins            # this package
+  - /opt/sentinel-plugins-it4i       # site-specific sets, if any
+```
+
+Directories are searched in the order given, so on a name clash the one listed first wins. A plain string still behaves as before.
+
+!!! warning "Install this before upgrading Sentinel to v2026.11.010"
+    A detector that `config.yaml` requires but whose file is in none of the directories raises `SENTINEL|detectors_missing` (channel `infra`, severity `critical`). That is why plugins are step 2 and the Sentinel upgrade is step 1 only on a fresh install — on an existing instance, install the package **first**.
 
 Plugins hot-reload — no restart needed after adding a new detector.
 

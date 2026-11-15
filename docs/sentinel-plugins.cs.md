@@ -1,6 +1,8 @@
 # Sentinel Plugins — Dokumentace detektorů
 
-Repozitář `sentinel-plugins` obsahuje **11 detektorů**, každý čte log streamy produkované [Sentinel Overhealth](./sentinel-overhealth.md) a hlásí incidenty do centrálního Sentinel API.
+Detektory čtou log streamy produkované [Sentinel Overhealth](./sentinel-overhealth.md) a hlásí incidenty do centrálního Sentinel API.
+
+Od **v2026.11.010** už nežijí všechny uvnitř Sentinelu. Sentinel si nechává jen základ — `base.py`, odkud pochází `api.BaseDetector`, a dva detektory, bez kterých nemá smysl běžet: `system_detector` (jádro) a `services_detector` (systemd). Zbylých deset je v repozitáři `sentinel-plugins` a nasazuje se vlastním balíčkem. Úprava detektoru tak už neznamená vydat celý Sentinel a vydání Sentinelu naopak nepřepíše detektory, které si někdo doplnil.
 
 ---
 
@@ -19,17 +21,48 @@ Repozitář `sentinel-plugins` obsahuje **11 detektorů**, každý čte log stre
 | **system_detector** | system.log (journalctl) | CRITICAL | ✗ | ✗ |
 | **temperature_detector** | temperature.log (sysfs) | WARNING / CRITICAL | **✓** | ✗ |
 | **detector_universal_security** | auth.log / syslog | INFO / WARNING / CRITICAL | ✗ | **✓** |
+| **detector_windows** | windows-*.log | WARNING / CRITICAL | ✗ | ✗ |
+
+`system_detector` a `services_detector` jsou součástí Sentinelu, zbytek přichází z balíčku `sentinel-plugins`.
+
+---
+
+## Kde detektory leží
+
+`plugin_dir` v `config.yaml` smí být **seznam adresářů** (od v2026.11.010):
+
+```yaml
+plugin_dir:
+  - /opt/Sentinel/sentinel/plugins   # základ dodávaný se Sentinelem
+  - /opt/sentinel-plugins            # balíček sentinel-plugins
+  - /opt/sentinel-plugins-it4i       # sady pro dané pracoviště, pokud jsou
+detectors:
+  - plugin: port_detector
+    match_pattern: ports.log
+```
+
+Hledá se v uvedeném pořadí, takže při shodě jmen vyhraje adresář uvedený dřív. **Jediný řetězec se chová jako dřív**, takže konfigurace, které seznam nepotřebují, se měnit nemusí.
+
+### Instalace z balíčku
+
+```bash
+apt install sentinel-plugins     # Debian / Ubuntu
+dnf install sentinel-plugins     # RHEL a odvozené
+```
+
+!!! warning "Balíček nainstalovat dřív než povýšit Sentinel"
+    Detektor, který `config.yaml` vyžaduje a jeho soubor není ani v jednom adresáři, založí `SENTINEL|detectors_missing` (kanál `infra`, severity `critical`). Povýšení na v2026.11.010 bez nainstalovaného balíčku tedy vyrobí critical issue za každý přesunutý detektor.
 
 ---
 
 ## Detektory v odděleném repozitáři
 
-Ne každý detektor je součástí Sentinelu. Ty specifické pro dané pracoviště — HPC clustery, ECC počítadla, chlazení — se běžně drží ve vlastním repozitáři a nasazují do `PLUGIN_DIR` vedle vestavěných pluginů.
-
-To uspořádání má dvě pasti a obě už v provozu sklaply:
+Detektory specifické pro dané pracoviště — HPC clustery, ECC počítadla, chlazení — patří do vlastního repozitáře. Do v2026.11.010 se musely kopírovat **do adresáře pluginů Sentinelu**, a právě odtud pocházejí obě následující pasti:
 
 - **Žádný deploy balíčku `Sentinel` je tam nedostane.** Potřebují vlastní deploy krok; bez něj můžou soubory prostě chybět, zatímco `config.yaml` je pořád vyjmenovává.
 - **Nikdy `rsync --delete` do adresáře pluginů.** Oddělený repozitář neobsahuje pluginy dodávané se Sentinelem, takže `--delete` je smaže.
+
+Obě zmizí, jakmile má sada vlastní adresář v `plugin_dir`: nikdo nezapisuje do cizího adresáře, takže ho nemá jak přepsat ani smazat. Kopírování zůstává jedinou možností pro instance starší než v2026.11.010.
 
 Třetí úskalí není v nástrojích, ale v načasování: běžící proces si naimportované moduly drží v paměti, takže detektory se smazanými zdrojovými soubory **fungují dál až do dalšího restartu**. Mezi smazáním a restartem, který to odhalí, můžou uběhnout dny.
 
@@ -55,7 +88,9 @@ Pokud v adresáři pluginů leží `__pycache__` se záznamy, ke kterým chybí 
   DB write   Auto-heal  DISK_FULL|  AI enqueue
 ```
 
-Každý detektor dědí z `BaseDetector` (`base.py`). Plugin Manager dynamicky načte všechny soubory `*.py`, ověří rozhraní a předává log řádky dle odpovídající masky souboru.
+Každý detektor dědí z `BaseDetector`, který importuje jako `api.BaseDetector`; samotná třída leží v `base.py` uvnitř Sentinelu a `sentinel/api.py` ji re-exportuje. Proto `base.py` zůstává u Sentinelu, i když se detektory odstěhovaly — detektoru v libovolném adresáři stačí `from sentinel import api`.
+
+Plugin Manager načte soubor pojmenovaný v `config.yaml` klíčem `plugin` z prvního adresáře v `plugin_dir`, který ho má, ověří rozhraní a předává log řádky dle odpovídající masky souboru.
 
 ---
 

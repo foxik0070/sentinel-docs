@@ -1,6 +1,8 @@
 # Sentinel Plugins — Detector Documentation
 
-The `sentinel-plugins` repository ships **11 detectors**, each reading log streams produced by [Sentinel Overhealth](./sentinel-overhealth.md) and reporting incidents to the central Sentinel API.
+Detectors read log streams produced by [Sentinel Overhealth](./sentinel-overhealth.md) and report incidents to the central Sentinel API.
+
+Since **v2026.11.010** they no longer all live inside Sentinel. Sentinel keeps only the base — `base.py`, which is where `api.BaseDetector` comes from, plus the two detectors it makes no sense to run without: `system_detector` (kernel) and `services_detector` (systemd). The remaining ten live in the `sentinel-plugins` repository and are deployed by their own package, so a change to a detector no longer means releasing all of Sentinel, and a release of Sentinel no longer overwrites detectors somebody added.
 
 ---
 
@@ -19,17 +21,48 @@ The `sentinel-plugins` repository ships **11 detectors**, each reading log strea
 | **system_detector** | system.log (journalctl) | CRITICAL | ✗ | ✗ |
 | **temperature_detector** | temperature.log (sysfs) | WARNING / CRITICAL | **✓** | ✗ |
 | **detector_universal_security** | auth.log / syslog | INFO / WARNING / CRITICAL | ✗ | **✓** |
+| **detector_windows** | windows-*.log | WARNING / CRITICAL | ✗ | ✗ |
+
+`system_detector` and `services_detector` ship with Sentinel; the rest come from the `sentinel-plugins` package.
+
+---
+
+## Where Detectors Live
+
+`plugin_dir` in `config.yaml` may be a **list of directories** (v2026.11.010 and later):
+
+```yaml
+plugin_dir:
+  - /opt/Sentinel/sentinel/plugins   # the base that ships with Sentinel
+  - /opt/sentinel-plugins            # the sentinel-plugins package
+  - /opt/sentinel-plugins-it4i       # site-specific sets, if any
+detectors:
+  - plugin: port_detector
+    match_pattern: ports.log
+```
+
+Directories are searched in the order given, so on a name clash the one listed first wins. **A plain string still behaves as before**, so configurations that do not need a list do not have to change.
+
+### Installing from the package
+
+```bash
+apt install sentinel-plugins     # Debian / Ubuntu
+dnf install sentinel-plugins     # RHEL and derivatives
+```
+
+!!! warning "Install the package before upgrading Sentinel"
+    A detector that `config.yaml` requires but whose file is in none of the directories raises `SENTINEL|detectors_missing` (channel `infra`, severity `critical`). Upgrading to v2026.11.010 without the package installed therefore produces a critical issue for every moved detector.
 
 ---
 
 ## Detectors in a Separate Repository
 
-Not every detector ships with Sentinel. Site-specific ones — HPC clusters, ECC counters, cooling — are commonly kept in their own repository and deployed into `PLUGIN_DIR` alongside the built-in plugins.
-
-That arrangement has two traps, both of which have bitten in production:
+Site-specific detectors — HPC clusters, ECC counters, cooling — belong in their own repository. Until v2026.11.010 they had to be copied **into Sentinel's plugin directory**, which is where both of the following traps came from:
 
 - **No deploy of the `Sentinel` package will place them.** They need their own deploy step; without it the files can simply be absent while `config.yaml` still lists them.
 - **Never `rsync --delete` into the plugin directory.** The separate repository does not contain the plugins that ship with Sentinel, so `--delete` removes them.
+
+Both disappear once the set has its own directory in `plugin_dir`: nothing writes into somebody else's directory, so nothing can overwrite or delete it. Copying remains the only option for instances older than v2026.11.010.
 
 A third hazard is timing rather than tooling: a running process keeps imported modules in memory, so detectors whose source files are deleted **keep working until the next restart**. The gap between the deletion and the restart that exposes it can be days.
 
@@ -55,7 +88,9 @@ If a plugin directory holds `__pycache__` entries whose `.py` counterparts are g
   DB write   Auto-heal  DISK_FULL|  AI enqueue
 ```
 
-Every detector inherits from `BaseDetector` (`base.py`). The Plugin Manager dynamically loads all `*.py` files, validates the interface, and passes log lines by matching file masks.
+Every detector inherits from `BaseDetector`, which detectors import as `api.BaseDetector`; the class itself lives in `base.py` inside Sentinel and is re-exported by `sentinel/api.py`. That is why `base.py` stays with Sentinel even though the detectors moved out — a detector in any directory only needs `from sentinel import api`.
+
+The Plugin Manager loads the file named by `plugin` in `config.yaml` from the first directory in `plugin_dir` that has it, validates the interface, and passes log lines by matching file masks.
 
 ---
 

@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.11.008)
+# Sentinel Commander — Documentation (v2026.11.010)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.008
+                    v2026.11.010
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,11 +43,27 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.11.008 the system has accumulated **1 260 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.11.010 the system has accumulated **1 261 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
 
 ---
 
-## What's New in v2026.11.005 – v2026.11.008 (2026-11-13)
+## What's New in v2026.11.009 – v2026.11.010 (2026-11-15)
+
+| Feature | Detail |
+|---|---|
+| **Detectors are a separate package** | Sentinel now keeps only the base: `base.py` (the source of `api.BaseDetector`) and the two detectors it makes no sense to run without — `system_detector` and `services_detector`. The other ten moved to the `sentinel-plugins` repository and install from their own `.deb`/`.rpm`. A detector fix no longer means releasing all of Sentinel, and a Sentinel release no longer overwrites detectors somebody added. See [Sentinel Plugins](./sentinel-plugins.md) |
+| **`plugin_dir` may be a list** | It used to be a single directory, which is what forced site-specific detectors to be copied **into** Sentinel's directory — the arrangement behind two production incidents. Directories are now searched in the order given; a plain string behaves as before |
+| **Hailo: JSON tasks return JSON** | `hailo-ollama` ignores both `format` and `response_format`, so remediation and severity classification came back wrapped in markdown and `process_ai_proposal()` could not parse them. A system message keyed on `context.source` is the only lever that works; it has to be single-line, because an LF in `content` breaks hailo-ollama's internal rendering. Measured with the production prompt: three cases out of three returned no JSON without it, valid JSON — and faster — with it |
+| **Control tokens stripped** | Small models occasionally leak their own control markers into the reply (`<turn\|>`, `<\|im_end\|>`). They are now removed from every response, not just the Hailo path. The filter is narrow, so ordinary `<br>` survives |
+| **Packages for six components** | `.deb` and `.rpm` for Sentinel, agent, alert, overhealth, console and plugins, published as releases and into a Debian/RPM registry. See [Deployment](./DEPLOYMENT.md) |
+| **Tests: 1 260 → 1 261** | Plus 10 in `sentinel-plugins`, which now has its own suite, and 102 in `sentinel-agent` |
+
+!!! warning "Upgrade order"
+    Install `sentinel-plugins` **before** upgrading to v2026.11.010. A detector that `config.yaml` requires but whose file is nowhere in `plugin_dir` raises `SENTINEL|detectors_missing` (critical).
+
+---
+
+## What Was New in v2026.11.005 – v2026.11.008 (2026-11-13)
 
 | Feature | Detail |
 |---|---|
@@ -230,7 +246,7 @@ As of v2026.11.008 the system has accumulated **1 260 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 260 automated tests** (v2026.11.008) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 261 automated tests** (v2026.11.010) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 
