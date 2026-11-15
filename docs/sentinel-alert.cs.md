@@ -1,6 +1,6 @@
 # Sentinel Alert — Dashboard pro síťovou bezpečnost
 
-**Verze:** 2026.06.001 (Debian / Ubuntu / Raspbian · RHEL 8 / 9 / 10)  
+**Verze:** 2026.11.005 (Debian / Ubuntu / Raspbian · RHEL 8 / 9 / 10)  
 **Python:** 3.13+
 
 Sentinel Alert je **standalone real-time dashboard pro síťovou bezpečnost** — zcela nezávislý na Sentinel core. Běží na vlastním portu (5056), vlastní SQLite databázi a vlastní systemd službě.
@@ -218,6 +218,33 @@ Work režim přizpůsobí dashboard pro firemní nasazení, kde LAN scanning nen
 | Settings | vyžaduje přihlášení | **skryto** |
 
 Aktivace: `type = work` v sekci `[mode]`. Kombinujte s `ips_file` (vizualizace blokovaných IP) a `who_file` (CSV seznam uživatelů).
+
+---
+
+
+### Přihlášení uživatelé podle clusteru
+
+V pracovním režimu panel uživatelů seskupuje relace podle **clusteru**, každá skupina má název, barevnou tečku a počet. Řádky nesou barevný proužek a oblouky na globusu mají stejnou barvu, takže je na první pohled vidět, kdo je kde přihlášený — dřív byly všechny stejné.
+
+Barvy pocházejí z palety ověřené proti tmavému podkladu (nejhorší sousední dvojice ΔE 8,4 pro barvosleposti, kontrast všech ≥ 3:1) a **necyklují se** — devátý cluster by jinak dostal barvu někoho jiného, proto spadne do neutrální *ostatní*. Název clusteru je vždy vypsaný vedle barvy, takže identita nikdy nestojí jen na barvě.
+
+Cluster ke každé relaci dodává externí WHO sběrač; dashboard jen zobrazuje, co uloží do `active_users`.
+
+### Závažnost zásahů honeypotu
+
+Vystavený honeypot skenery trefují neustále — je to očekávaný šum, ne incident. Posílán do Sentinelu jako *high* překrýval skutečné problémy. Běžné zásahy jdou nově jako `hit_severity` (výchozí **low**); `notable_severity` platí jen tam, kde útočník něco **dokázal** (údaje, příkaz, stažený payload), nebo kde zásah přišel z vlastní sítě.
+
+```ini
+[sentinel]
+hit_severity     = low
+notable_severity = medium
+```
+
+Pozor, že **payload má každý záchyt** — i holý protokolový pozdrav — takže jeho přítomnost sama o sobě nic neznamená; rozhoduje obsah. Vyžaduje Sentinel 2026.11.012 a novější, který `severity` v hlášení přijímá; se starším se hodnota jen ignoruje.
+
+### Autentizace u Security Center a service checků
+
+`/api/fsc/*` a `/api/services/*` dosud odpovídaly bez přihlášení, takže kdokoliv v síti mohl číst inventář hostů nebo mazat service checky. Obojí je zavřené: čtení admin/viewer/read-only token, zápis jen admin.
 
 ---
 

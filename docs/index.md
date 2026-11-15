@@ -1,4 +1,4 @@
-# Sentinel Commander — Documentation (v2026.11.011)
+# Sentinel Commander — Documentation (v2026.11.014)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.011
+                    v2026.11.014
 ```
 
 **Hybrid AI Log Monitor & Analyzer for Linux Infrastructure**
@@ -43,11 +43,28 @@
 
 Sentinel Commander is an advanced hybrid monitoring system with a full AI layer designed for enterprise Linux infrastructure. It combines a **Pull** approach (inotify log tailing) with a **Push** approach (remote Python agents POSTing telemetry). Core integrations: Hailo AI HAT 2+ NPU (hailo-ollama), local/external Ollama LLM, ChromaDB (RAG).
 
-As of v2026.11.011 the system has accumulated **1 275 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
+As of v2026.11.014 the system has accumulated **1 294 automated tests** and **80/100 AI roadmap items** across 24 new AI modules covering diagnostics, verification, remediation planning, correlation, baselining, forecasting, and knowledge management.
 
 ---
 
-## What's New in v2026.11.009 – v2026.11.011 (2026-11-15)
+## What's New in v2026.11.012 – v2026.11.014 (2026-11-15)
+
+| Feature | Detail |
+|---|---|
+| **Ignoring an issue finally sticks** | It used to mean "hide it in one place": the key went into a JSON file that only `chat_service` knew, applied **when listing**. The detector recreated the same key on its next run, the notification went out and it counted again. There were **three** overlapping mechanisms and none at the source. Ignoring now lives in the database and is checked by `save_problem()` — the single place an issue is created — so an ignored key is never stored, never notifies and never counts. What was ignored before is migrated once, so nothing starts shouting after the upgrade |
+| **Issue actions are grouped** | A card carried **eleven icons** side by side with no order, so you could not tell what changes the issue from what merely shows it. The two most used stay inline; the rest moved into a menu split by effect: *find out more* / *edit* / *stop reporting* / *other*. Ignoring and deleting now ask first and say what will happen |
+| **Approved action reached the cluster name, not the host** | A capture with `cluster = OTHER` (the default for unmapped hosts) and `node = rpi` passed the cluster into SSH, so it ran `ssh other`. On an instance without `infrastructure_mapping` that hit **every** approved action. The target is now resolved as mapping → `localhost` → the action's `node` → cluster; if none yields a host the action is refused with a clear message |
+| **MQTT did not work from the package** | `paho-mqtt` was missing from `requirements.txt` — `install.sh` installed it separately, so a manual install worked and the package (own venv) did not. The UI also could not tell "library missing" from "broker unreachable"; both looked like *not connected* |
+| **A missing minifier left a blank UI** | The template loads `script-*.min.js`. When minification is skipped and the files do not exist, Flask returns an HTML error page, the browser refuses it on MIME grounds and **no script loads at all**. `rjsmin`/`rcssmin` are now dependencies, and if minification still fails the unminified files are copied under the expected names — slower beats broken |
+| **Undervoltage only from real mains sensors** | `ha_detector` treated every entity named `voltage` as mains, so a motherboard rail (0–12 V) on a powered-off machine reported "undervoltage 0.0 V". It now needs an explicit whitelist, or **history**: the entity must at some point have shown at least 100 V |
+| **Tests: 1 284 → 1 294** | Plus 15 in `sentinel-plugins` and 158 in `sentinel-alert` |
+
+!!! warning "Behaviour change"
+    `cluster = UNKNOWN` without a node is now refused. It used to run the command **on the server itself** — executing someone else's command locally just because the target is unknown is worse than refusing.
+
+---
+
+## What Was New in v2026.11.009 – v2026.11.011 (2026-11-15)
 
 | Feature | Detail |
 |---|---|
@@ -248,7 +265,7 @@ As of v2026.11.011 the system has accumulated **1 275 automated tests** and **80
 
 ### Engineering Quality
 
-- **1 275 automated tests** (v2026.11.011) — route, security, integration, AI layer, issue lifecycle, benchmark
+- **1 294 automated tests** (v2026.11.014) — route, security, integration, AI layer, issue lifecycle, benchmark
 - CI pipeline — `pytest` + `node --check` + `make build`, `pre-push` git hook
 - Linting — ruff (Python), ESLint, pinned `requirements.txt`
 

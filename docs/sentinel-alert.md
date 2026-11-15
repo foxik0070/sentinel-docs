@@ -1,6 +1,6 @@
 # Sentinel Alert — Network Security Dashboard
 
-**Version:** 2026.06.001 (Debian / Ubuntu / Raspbian · RHEL 8 / 9 / 10)  
+**Version:** 2026.11.005 (Debian / Ubuntu / Raspbian · RHEL 8 / 9 / 10)  
 **Python:** 3.13+
 
 Sentinel Alert is a **standalone real-time network security dashboard** — completely independent of the Sentinel core. It runs on its own port (5056), its own SQLite database, and its own systemd service.
@@ -218,6 +218,33 @@ Work mode adapts the dashboard for office deployments where LAN scanning is unav
 | Settings | auth required | **hidden** |
 
 Enable with `type = work` in `[mode]`. Pair with `ips_file` (blocked IPs visualised on globe) and `who_file` (CSV user list shown in Users panel).
+
+---
+
+
+### Logged-in users by cluster
+
+In work mode the Users panel groups sessions by **cluster**, each group with its name, a coloured dot and a count. Rows carry a coloured stripe and the arcs on the globe use the same colour, so it is visible at a glance who is logged in where — they used to be identical.
+
+Colours come from a palette validated against the dark surface (worst adjacent pair ΔE 8.4 for colour vision deficiency, contrast ≥ 3:1 for all) and are **never cycled** — a ninth cluster would otherwise take someone else's colour, so it falls into a neutral *other*. The cluster name is always printed next to the colour, so identity never rests on colour alone.
+
+The cluster for each session is supplied by the external WHO collector; the dashboard only renders what it stores in `active_users`.
+
+### Severity of honeypot hits
+
+An exposed honeypot is hit by scanners constantly — that is expected noise, not an incident. Sent to Sentinel as *high*, it buried real problems. Ordinary hits now go as `hit_severity` (default **low**); `notable_severity` applies only where the attacker **achieved** something (credentials, a command, a downloaded payload) or where the hit came from the local network.
+
+```ini
+[sentinel]
+hit_severity     = low
+notable_severity = medium
+```
+
+Note that **every capture carries a payload** — even a bare protocol banner — so its presence alone means nothing; the content decides. Requires Sentinel 2026.11.012 or newer, which accepts `severity` in an agent report; with anything older the value is simply ignored.
+
+### Authentication on Security Center and service checks
+
+`/api/fsc/*` and `/api/services/*` used to answer without a session, so anyone on the LAN could read the host inventory or delete service checks. Both are now closed: reading for admin/viewer/read-only token, writing for admin only.
 
 ---
 

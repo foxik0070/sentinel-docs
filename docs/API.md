@@ -1,4 +1,4 @@
-# Sentinel API Reference (v2026.11.011)
+# Sentinel API Reference (v2026.11.014)
 
 Complete API documentation for plugins, agents, and external integrations.
 

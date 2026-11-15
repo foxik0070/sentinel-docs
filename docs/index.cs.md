@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.11.011)
+# Sentinel Commander — Dokumentace (v2026.11.014)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.011
+                    v2026.11.014
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,11 +43,28 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.11.011 systém obsahuje **1 275 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.11.014 systém obsahuje **1 294 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
 
 ---
 
-## Co je nového ve v2026.11.009 – v2026.11.011 (2026-11-15)
+## Co je nového ve v2026.11.012 – v2026.11.014 (2026-11-15)
+
+| Funkce | Detail |
+|---|---|
+| **Ignorování issue konečně drží** | Dosud znamenalo „schovat na jednom místě": klíč šel do JSON souboru, který znal jen `chat_service`, a ten se uplatnil **až při výpisu**. Detektor tentýž klíč při dalším běhu založil znovu, notifikace odešla a v počtech byl vidět. Mechanismy na to byly **tři** a žádný u zdroje. Ignorace je nově v databázi a kontroluje ji `save_problem()` — jediné místo, kudy issue vzniká — takže ignorovaný klíč se neuloží, neodešle notifikaci ani se nezapočítá. Co bylo ignorované dřív, se jednorázově převezme, takže se po upgradu nezačne hlásit |
+| **Akce u issue jsou seskupené** | U karty bylo **jedenáct ikon** vedle sebe bez uspořádání, takže nešlo poznat, co issue změní a co jen ukáže. Dvě nejčastější zůstaly inline, zbytek je v nabídce dělené podle účinku: *zjistit víc* / *upravit* / *přestat hlásit* / *ostatní*. Ignorování a mazání se nově ptají a říkají, co se stane |
+| **Schválená akce šla na název clusteru, ne na stroj** | Záchyt s `cluster = OTHER` (výchozí pro hosty bez mapování) a `node = rpi` předával do SSH cluster, takže se spustilo `ssh other`. Na instanci bez `infrastructure_mapping` to potkalo **každou** schválenou akci. Cíl se nově hledá: mapování → `localhost` → `node` akce → cluster; když nic nedá stroj, akce se odmítne srozumitelnou hláškou |
+| **MQTT z balíčku nejelo** | `paho-mqtt` chyběl v `requirements.txt` — instaloval ho jen `install.sh`, takže u ruční instalace fungovalo a u balíčku (vlastní venv) ne. V UI se navíc nedalo odlišit „chybí knihovna" od „broker je nedostupný"; obojí vypadalo jako *nepřipojeno* |
+| **Chybějící minifikátor nechal prázdné UI** | Šablona načítá `script-*.min.js`. Když se minifikace přeskočí a soubory neexistují, Flask vrátí HTML chybovou stránku, prohlížeč ji odmítne kvůli MIME typu a **nenačte se žádný skript**. `rjsmin`/`rcssmin` jsou nově závislosti a když minifikace přesto selže, zkopírují se nezmenšené soubory pod očekávanými jmény — pomalejší je lepší než rozbité |
+| **Podpětí jen ze skutečných síťových senzorů** | `ha_detector` bral každou entitu se slovem `voltage` za síťové napětí, takže napěťová větev desky (0–12 V) na vypnutém stroji hlásila „podpětí 0.0 V". Nově potřebuje výslovný seznam, nebo **historii**: entita musí někdy ukázat aspoň 100 V |
+| **Testy: 1 284 → 1 294** | Plus 15 v `sentinel-plugins` a 158 v `sentinel-alert` |
+
+!!! warning "Změna chování"
+    `cluster = UNKNOWN` bez node se nově odmítne. Dřív se příkaz spustil **na serveru samotném** — spouštět cizí příkaz lokálně jen proto, že neznáme cíl, je horší než odmítnutí.
+
+---
+
+## Co bylo nového ve v2026.11.009 – v2026.11.011 (2026-11-15)
 
 | Funkce | Detail |
 |---|---|
@@ -302,7 +319,7 @@ Ve verzi v2026.11.011 systém obsahuje **1 275 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 275 automatizovaných testů** (v2026.11.011) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 294 automatizovaných testů** (v2026.11.014) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`
