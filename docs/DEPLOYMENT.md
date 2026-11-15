@@ -29,15 +29,19 @@ Every component is published as a `.deb` and an `.rpm`. Everything is pure Pytho
 A release is a file to download; a **registry** is what lets a machine fetch the package through `apt` or `dnf`, upgrades included — that is how it should be installed in production.
 
 ```bash
-# Debian / Ubuntu
-echo "deb [trusted=yes] https://<gitea>/api/packages/<owner>/debian stable main" \
+# Debian / Ubuntu — with signature verification, not trusted=yes
+curl -s https://<gitea>/api/packages/<owner>/debian/repository.key \
+  | gpg --dearmor > /etc/apt/keyrings/sentinel-gitea.gpg
+echo "deb [signed-by=/etc/apt/keyrings/sentinel-gitea.gpg] https://<gitea>/api/packages/<owner>/debian stable main" \
   > /etc/apt/sources.list.d/sentinel.list
 apt update && apt install sentinel
 
-# RHEL and derivatives
+# RHEL and derivatives — the generated .repo sets gpgkey itself
 dnf config-manager --add-repo https://<gitea>/api/packages/<owner>/rpm.repo
 dnf install sentinel
 ```
+
+Gitea signs the `Release` file, so `[trusted=yes]` is unnecessary — without the key `apt` only warns `NO_PUBKEY`. Anonymous access works only when the instance does not require sign-in (`REQUIRE_SIGNIN_VIEW` in `app.ini`); otherwise the token has to go into the repository URL as well.
 
 Components whose dependencies exist only on PyPI (`sentinel`, `sentinel-alert`, `sentinel-console`) build a virtualenv in `postinst`, which **requires network access**. If that fails, the package install fails loudly rather than leaving a configured package with a service that cannot start.
 
