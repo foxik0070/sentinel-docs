@@ -314,8 +314,10 @@ Service state changes (up→down / down→up) are forwarded to the configured Se
 | GET | `/api/stats/countries` | no | Country hit counts |
 | GET | `/api/blocklist` | no | Blocked IPs with geo data |
 | GET | `/api/devices` | no | LAN devices |
-| GET | `/api/fsc/data` | no | Security Center scan data |
-| POST | `/api/fsc/scan` | no | Trigger manual scan |
+| GET | `/api/fsc/data` | yes | Security Center scan data — host inventory (OS, kernel, open issues/ports) |
+| GET | `/api/fsc/hosts` | yes | Monitored hosts with scan status |
+| POST | `/api/fsc/scan` | yes | Trigger manual scan (admin only) |
+| POST | `/api/fsc/hosts/toggle` | yes | Enable/disable a host for scanning (admin only) |
 | GET | `/api/services` | no | Service monitor list (uptime + sparkline) |
 | POST | `/api/services` | no | Add monitored service |
 | DELETE | `/api/services/{id}` | no | Remove service |

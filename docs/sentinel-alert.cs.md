@@ -314,8 +314,10 @@ Změny stavu služby (nahoru↔dolů) jsou přeposílány na konfigurovaný Sent
 | GET | `/api/stats/countries` | ne | Počty hitů podle státu |
 | GET | `/api/blocklist` | ne | Blokované IP s geo daty |
 | GET | `/api/devices` | ne | LAN zařízení |
-| GET | `/api/fsc/data` | ne | Data Security Center scanu |
-| POST | `/api/fsc/scan` | ne | Spustit manuální scan |
+| GET | `/api/fsc/data` | ano | Data Security Center scanu — inventář hostů (OS, jádro, otevřené problémy/porty) |
+| GET | `/api/fsc/hosts` | ano | Monitorovaní hosté se stavem skenu |
+| POST | `/api/fsc/scan` | ano | Spustit manuální scan (jen admin) |
+| POST | `/api/fsc/hosts/toggle` | ano | Zapnout/vypnout hosta pro sken (jen admin) |
 | GET | `/api/services` | ne | Seznam service monitoru (uptime + sparkline) |
 | POST | `/api/services` | ne | Přidat monitorovanou službu |
 | DELETE | `/api/services/{id}` | ne | Odebrat službu |
