@@ -1,4 +1,4 @@
-# Sentinel Ecosystem — Troubleshooting Guide (v2026.11.010)
+# Sentinel Ecosystem — Troubleshooting Guide (v2026.11.011)
 
 Common issues and solutions across all Sentinel components.
 

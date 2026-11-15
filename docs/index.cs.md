@@ -1,4 +1,4 @@
-# Sentinel Commander — Dokumentace (v2026.11.010)
+# Sentinel Commander — Dokumentace (v2026.11.011)
 
 ```
                    ##
@@ -23,7 +23,7 @@
    ++++##########+####++++++-+++++++-+++---------.
 
         S E N T I N E L   C O M M A N D E R
-                    v2026.11.010
+                    v2026.11.011
 ```
 
 **Hybridní AI log monitor a analyzátor pro enterprise Linux infrastrukturu**
@@ -43,11 +43,11 @@
 
 Sentinel Commander je pokročilý hybridní monitorovací systém s plnou AI vrstvou určený pro enterprise Linux infrastrukturu. Kombinuje **Pull** přístup (inotify tailing logů) s **Push** přístupem (vzdálení Python agenti POSTují telemetrii). Klíčové integrace: Hailo AI HAT 2+ NPU (hailo-ollama), lokální/externí Ollama LLM, ChromaDB (RAG).
 
-Ve verzi v2026.11.010 systém obsahuje **1 261 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
+Ve verzi v2026.11.011 systém obsahuje **1 275 automatizovaných testů** a **80/100 AI roadmap položek** pokrytých 24 novými AI moduly pro diagnostiku, verifikaci, plánování remediace, korelaci, baselining, předpovědi a správu znalostí.
 
 ---
 
-## Co je nového ve v2026.11.009 – v2026.11.010 (2026-11-15)
+## Co je nového ve v2026.11.009 – v2026.11.011 (2026-11-15)
 
 | Funkce | Detail |
 |---|---|
@@ -56,7 +56,9 @@ Ve verzi v2026.11.010 systém obsahuje **1 261 automatizovaných testů** a **80
 | **Hailo: JSON úlohy vracejí JSON** | `hailo-ollama` ignoruje `format` i `response_format`, takže remediace a klasifikace závažnosti chodily zabalené v markdownu a `process_ai_proposal()` je neuparsoval. Jediná páka, která zabírá, je system zpráva podle `context.source`; musí být jednořádková, protože LF v `content` rozbíjí vnitřní rendering hailo-ollamy. Měřeno s produkčním promptem: tři případy ze tří bez ní nevrátily JSON, s ní všechny a rychleji |
 | **Řídicí tokeny ven** | Malé modely občas propustí vlastní řídicí značku do odpovědi (`<turn\|>`, `<\|im_end\|>`). Odstraňují se teď ze všech odpovědí, ne jen z Hailo cesty. Filtr je úzký, takže běžného `<br>` se nedotkne |
 | **Balíčky pro šest komponent** | `.deb` a `.rpm` pro Sentinel, agenta, alert, overhealth, konzoli a pluginy, vydávané jako release a do Debian/RPM registry. Viz [Deployment](./DEPLOYMENT.md) |
-| **Testy: 1 260 → 1 261** | Plus 10 v `sentinel-plugins`, který má nově vlastní sadu, a 102 v `sentinel-agent` |
+| **Překlep v configu už neshodí službu** | `plugin_dir` zapsaný jako seznam vyhodil `TypeError` ve `_validate_config()`. Ta se volá při `import sentinel.config`, takže výjimka zabila celou aplikaci — a se `Restart=always` je z toho smyčka restartů bez webu a bez příjmu od agentů. Validace i kontrola schématu jsou nově ošetřené: když selžou, zaloguje se to a konfigurace se použije dál. Diagnostika nemá právo zabít to, co diagnostikuje. Cesty se navíc kontrolují typově: `plugin_dir` bere řetězec nebo seznam řetězců, `log_dir` a `data_dir` jen řetězec, cokoliv jiného je `error` a jede se s výchozí hodnotou |
+| **`--check-config`** | `python3 -m sentinel --check-config` vypíše nálezy validace, `plugin_dir` a počet detektorů; vrací nenulový kód při chybě nebo chybějícím souboru. Ověřování importem `sentinel.config` je přesně to, co nestačí — validace je záměrně nekritická, takže import projde i u rozbitého configu |
+| **Testy: 1 260 → 1 275** | Plus 10 v `sentinel-plugins`, který má nově vlastní sadu, a 102 v `sentinel-agent` |
 
 !!! warning "Pořadí při povýšení"
     `sentinel-plugins` nainstalovat **dřív**, než se povýší na v2026.11.010. Detektor, který `config.yaml` vyžaduje a jeho soubor není nikde v `plugin_dir`, založí `SENTINEL|detectors_missing` (critical).
@@ -300,7 +302,7 @@ Ve verzi v2026.11.010 systém obsahuje **1 261 automatizovaných testů** a **80
 
 ### Inženýrská kvalita
 
-- **1 261 automatizovaných testů** (v2026.11.010) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
+- **1 275 automatizovaných testů** (v2026.11.011) — route, security, integrační, AI vrstva, issue lifecycle, benchmark
 - **CI pipeline** — Gitea Actions (`pytest` + `node --check` + `make build`), `pre-push` git hook, `make ci`
 - **Linting** — ruff (Python), ESLint s `no-redeclare=error` (JS), pinované `requirements.txt`
 - **Refaktoring** — `notifier.py` (všechny odchozí kanály), `issue_lifecycle.py` (auto-zavírání issues) a `ssh_utils.py` extrahovány z `chat_service.py`; maintenance smyčka integrována přímo v `chat_service.py`
